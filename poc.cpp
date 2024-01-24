@@ -61,7 +61,10 @@ public:
         ib.submit_buffers(dq.queue());
 
         sw.one_time_submit(dq, [&](auto &pcb) {
-          auto scb = sw.cmd_render_pass(pcb);
+          auto scb = sw.cmd_render_pass({
+              .command_buffer = *pcb,
+              .clear_color = {{0, 0, 0, 1}},
+          });
           ps.run(*scb, ib);
         });
       });
