@@ -1,27 +1,71 @@
 #pragma leco app
+#pragma leco add_resource "BrainF.png"
+#pragma leco add_resource "Lenna_(test_image).png"
 export module poc;
 
 import casein;
+import hai;
+import jute;
 import silog;
 import quack;
+import sith;
+import traits;
 import vee;
 import voo;
 
-void atlas_image(quack::u8_rgba *img) {
-  for (auto i = 0; i < 16 * 16; i++) {
-    auto x = (i / 16) % 2;
-    auto y = (i % 16) % 2;
-    unsigned char b = (x ^ y) == 0 ? 255 : 0;
+// Desired workflow:
+// * Splash screen (fade in/out)
+// * Second splash screen (fade in/out)
+// * Menu with three options (tween in/out):
+//   1. Start game
+//   2. Options
+//   3. Credits
+//   4. Exit (available only on Win/Mac)
+// * Start game = blank screen for 2 seconds
+// * Options = a list of tabs
+//   - List TBD, but it must contain "fullscreen" and "audio volume"
+// * Credits = just "author" and some OSS credits (tween in/out)
+// * Exit = duh
 
-    img[i] = {255, 255, 255, 0};
-    img[i + 256] = {b, b, b, 128};
+class splash : sith::thread {
+  quack::pipeline_stuff m_ps;
+  quack::instance_batch m_ib;
+  jute::view m_file;
+
+  void run() {
+    m_ib.load_atlas(m_file);
+    m_ib.set_count(1);
   }
-}
+
+public:
+  splash(quack::pipeline_stuff &&ps, jute::view res)
+      : m_ps{traits::move(ps)}, m_ib{m_ps.create_batch(1)}, m_file{res} {
+    m_ib.map_all([](auto all) {
+      all.positions[0] = {{0, 0}, {1, 1}};
+      all.multipliers[0] = {1, 1, 1, 1};
+      all.colours[0] = {0, 0, 0, 0};
+      all.uvs[0] = {{0, 0}, {1, 1}};
+    });
+    m_ib.center_at(0.5, 0.5);
+    m_ib.set_grid(1, 1);
+    m_ib.set_count(0);
+    start();
+  }
+
+  [[nodiscard]] splash *next() noexcept { return this; }
+
+  void submit_buffers(vee::queue q) { m_ib.submit_buffers(q); }
+  void run(voo::swapchain_and_stuff &sw, vee::command_buffer cb) {
+    auto scb = sw.cmd_render_pass({
+        .command_buffer = cb,
+        .clear_color = {{0, 0, 0, 1}},
+    });
+    m_ps.run(*scb, m_ib);
+  }
+};
 
 constexpr const auto max_batches = 100;
 class renderer : public voo::casein_thread {
-  quack::instance_batch *m_ib;
-
 public:
   void run() override {
     voo::device_and_queue dq{"quack", native_ptr()};
@@ -30,29 +74,16 @@ public:
       voo::swapchain_and_stuff sw{dq};
 
       quack::pipeline_stuff ps{dq, sw, max_batches};
-      auto ib = ps.create_batch(2);
 
-      ib.load_atlas(16, 32, atlas_image);
-      ib.map_positions([](auto *ps) {});
-      ib.map_colours([](auto *cs) {});
-      ib.map_uvs([](auto *us) {});
-      ib.map_multipliers([](auto *ms) {});
-      ib.center_at(0.5, 0.5);
-      ib.set_count(1);
-      ib.set_grid(1, 1);
+      auto s = hai::uptr<splash>::make(traits::move(ps), "BrainF.png");
 
-      m_ib = &ib;
       release_init_lock();
       extent_loop(dq, sw, [&] {
-        ib.submit_buffers(dq.queue());
+        s->submit_buffers(dq.queue());
 
-        sw.one_time_submit(dq, [&](auto &pcb) {
-          auto scb = sw.cmd_render_pass({
-              .command_buffer = *pcb,
-              .clear_color = {{0, 0, 0, 1}},
-          });
-          ps.run(*scb, ib);
-        });
+        sw.one_time_submit(dq, [&](auto &pcb) { s->run(sw, *pcb); });
+
+        s.reset(s->next());
       });
     }
   }
@@ -63,32 +94,7 @@ public:
   }
 };
 
-class main_loop : public voo::casein_thread {
-public:
-  void run() override {
-    // Desired workflow:
-    // * Splash screen (fade in/out)
-    // * Second splash screen (fade in/out)
-    // * Menu with three options (tween in/out):
-    //   1. Start game
-    //   2. Options
-    //   3. Credits
-    //   4. Exit (available only on Win/Mac)
-    // * Start game = blank screen for 2 seconds
-    // * Options = a list of tabs
-    //   - List TBD, but it must contain "fullscreen" and "audio volume"
-    // * Credits = just "author" and some OSS credits (tween in/out)
-    // * Exit = duh
-  }
-
-  static auto &instance() {
-    static main_loop r{};
-    return r;
-  }
-};
-
 extern "C" void casein_handle(const casein::event &e) {
-  main_loop::instance().handle(e);
   renderer::instance().handle(e);
   quack::mouse_tracker::instance().handle(e);
 }
