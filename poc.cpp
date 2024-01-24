@@ -7,20 +7,6 @@ import quack;
 import vee;
 import voo;
 
-// Desired workflow:
-// * Splash screen (fade in/out)
-// * Second splash screen (fade in/out)
-// * Menu with three options (tween in/out):
-//   1. Start game
-//   2. Options
-//   3. Credits
-//   4. Exit (available only on Win/Mac)
-// * Start game = blank screen for 2 seconds
-// * Options = a list of tabs
-//   - List TBD, but it must contain "fullscreen" and "audio volume"
-// * Credits = just "author" and some OSS credits (tween in/out)
-// * Exit = duh
-
 void atlas_image(quack::u8_rgba *img) {
   for (auto i = 0; i < 16 * 16; i++) {
     auto x = (i / 16) % 2;
@@ -77,18 +63,32 @@ public:
   }
 };
 
-class updater : public voo::casein_thread {
+class main_loop : public voo::casein_thread {
 public:
-  void run() override { renderer::instance().setup_batch(); }
+  void run() override {
+    // Desired workflow:
+    // * Splash screen (fade in/out)
+    // * Second splash screen (fade in/out)
+    // * Menu with three options (tween in/out):
+    //   1. Start game
+    //   2. Options
+    //   3. Credits
+    //   4. Exit (available only on Win/Mac)
+    // * Start game = blank screen for 2 seconds
+    // * Options = a list of tabs
+    //   - List TBD, but it must contain "fullscreen" and "audio volume"
+    // * Credits = just "author" and some OSS credits (tween in/out)
+    // * Exit = duh
+  }
 
   static auto &instance() {
-    static updater r{};
+    static main_loop r{};
     return r;
   }
 };
 
 extern "C" void casein_handle(const casein::event &e) {
-  updater::instance().handle(e);
+  main_loop::instance().handle(e);
   renderer::instance().handle(e);
   quack::mouse_tracker::instance().handle(e);
 }
