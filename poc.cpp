@@ -7,6 +7,7 @@ import casein;
 import hai;
 import jute;
 import silog;
+import sitime;
 import quack;
 import sith;
 import traits;
@@ -31,6 +32,7 @@ class splash : sith::thread {
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
   jute::view m_file;
+  sitime::stopwatch m_time{};
 
   void run() {
     m_ib.load_atlas(m_file);
@@ -52,7 +54,26 @@ public:
     start();
   }
 
-  [[nodiscard]] splash *next() noexcept { return this; }
+  [[nodiscard]] splash *next() noexcept {
+    auto t = m_time.millis() / 1000.0;
+
+    m_ib.map_multipliers([t](auto *ms) {
+      float a = 1.0;
+      if (t < 1) {
+        a = t;
+      } else if (t > 2) {
+        a = 3.0 - t;
+        if (a < 0)
+          a = 0;
+      }
+      ms[0] = {1, 1, 1, a};
+    });
+
+    if (t > 3) {
+      return new splash(traits::move(m_ps), "Lenna_(test_image).png");
+    }
+    return this;
+  }
 
   void submit_buffers(vee::queue q) { m_ib.submit_buffers(q); }
   void run(voo::swapchain_and_stuff &sw, vee::command_buffer cb) {
