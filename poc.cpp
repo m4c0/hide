@@ -37,18 +37,6 @@ class renderer : public voo::casein_thread {
   quack::instance_batch *m_ib;
 
 public:
-  void setup_batch() {
-    wait_init();
-
-    m_ib->map_all([](auto p) {
-      auto &[cs, ms, ps, us] = p;
-      ps[1] = {{0.25, 0.25}, {0.5, 0.5}};
-      cs[1] = {0.25, 0, 0.1, 1.0};
-      us[1] = {{0, 0}, {1, 1}};
-      ms[1] = {1, 1, 1, 1};
-    });
-  }
-
   void run() override {
     voo::device_and_queue dq{"quack", native_ptr()};
 
@@ -59,12 +47,12 @@ public:
       auto ib = ps.create_batch(2);
 
       ib.load_atlas(16, 32, atlas_image);
-      ib.map_positions([](auto *ps) { ps[0] = {{0, 0}, {1, 1}}; });
-      ib.map_colours([](auto *cs) { cs[0] = {0, 0, 0.1, 1.0}; });
-      ib.map_uvs([](auto *us) { us[0] = {}; });
-      ib.map_multipliers([](auto *ms) { ms[0] = {1, 1, 1, 1}; });
+      ib.map_positions([](auto *ps) {});
+      ib.map_colours([](auto *cs) {});
+      ib.map_uvs([](auto *us) {});
+      ib.map_multipliers([](auto *ms) {});
       ib.center_at(0.5, 0.5);
-      ib.set_count(2);
+      ib.set_count(1);
       ib.set_grid(1, 1);
 
       m_ib = &ib;
