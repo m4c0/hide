@@ -60,8 +60,8 @@ public:
       : m_ps{traits::move(ps)}, m_ib{m_ps.create_batch(1)}, m_file{res} {
     m_ib.map_all([](auto all) {
       all.positions[0] = {{0, 0}, {1, 1}};
-      all.multipliers[0] = {1, 1, 1, 1};
-      all.colours[0] = {0, 0, 0, 0};
+      all.multipliers[0] = {};
+      all.colours[0] = {};
       all.uvs[0] = {{0, 0}, {1, 1}};
     });
     m_ib.center_at(0.5, 0.5);
