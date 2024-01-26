@@ -28,13 +28,14 @@ import voo;
 // * Credits = just "author" and some OSS credits (tween in/out)
 // * Exit = duh
 
-class splash : sith::thread {
+class splash {
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
   jute::view m_file;
   sitime::stopwatch m_time{};
+  sith::memfn_thread<splash> m_thread{this, &splash::run};
 
-  void run() {
+  void run(sith::thread *) {
     m_ib.load_atlas(m_file);
     m_ib.set_count(1);
 
@@ -67,7 +68,7 @@ public:
     m_ib.center_at(0.5, 0.5);
     m_ib.set_grid(1, 1);
     m_ib.set_count(0);
-    start();
+    m_thread.start();
   }
   ~splash() { vee::device_wait_idle(); }
 
