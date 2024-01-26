@@ -69,6 +69,7 @@ public:
     m_ib.set_count(0);
     start();
   }
+  ~splash() { vee::device_wait_idle(); }
 
   [[nodiscard]] splash *next() noexcept {
     auto t = m_time.millis() / 1000.0;
