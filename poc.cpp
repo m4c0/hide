@@ -37,6 +37,22 @@ class splash : sith::thread {
   void run() {
     m_ib.load_atlas(m_file);
     m_ib.set_count(1);
+
+    float t{};
+    while (t < 3 && !m_thread.interrupted()) {
+      t = m_time.millis() / 1000.0;
+      m_ib.map_multipliers([t](auto *ms) {
+        float a = 1.0;
+        if (t < 1) {
+          a = t;
+        } else if (t > 2) {
+          a = 3.0 - t;
+          if (a < 0)
+            a = 0;
+        }
+        ms[0] = {1, 1, 1, a};
+      });
+    }
   }
 
 public:
@@ -56,19 +72,6 @@ public:
 
   [[nodiscard]] splash *next() noexcept {
     auto t = m_time.millis() / 1000.0;
-
-    m_ib.map_multipliers([t](auto *ms) {
-      float a = 1.0;
-      if (t < 1) {
-        a = t;
-      } else if (t > 2) {
-        a = 3.0 - t;
-        if (a < 0)
-          a = 0;
-      }
-      ms[0] = {1, 1, 1, a};
-    });
-
     if (t > 3) {
       return new splash(traits::move(m_ps), "Lenna_(test_image).png");
     }
