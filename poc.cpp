@@ -81,7 +81,7 @@ public:
     });
     m_thread.start();
   }
-  virtual ~splash() { vee::device_wait_idle(); }
+  virtual ~splash() = default;
 
   [[nodiscard]] splash *next() noexcept {
     if (time() > 3)
