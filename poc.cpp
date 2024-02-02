@@ -42,6 +42,7 @@ class splash : voo::update_thread {
   vee::descriptor_set m_dset;
 
   sitime::stopwatch m_time{};
+  sith::memfn_thread<splash> m_thread{this, &splash::run};
 
   [[nodiscard]] auto alpha() const noexcept {
     float t = m_time.millis() / 1000.0;
@@ -64,6 +65,8 @@ class splash : voo::update_thread {
     m_ib.setup_copy(cb);
   }
 
+  using update_thread::run;
+
 public:
   splash() : update_thread{g_g.dq}, m_img{"BrainF.png", g_g.dq} {
     m_dset = m_ps.allocate_descriptor_set(m_img.iv(), *m_smp);
@@ -75,7 +78,7 @@ public:
       all.colours[0] = {0, 0, 0, 1};
       all.uvs[0] = {{0, 0}, {1, 1}};
     });
-    run_once();
+    m_thread.start();
   }
   virtual ~splash() { vee::device_wait_idle(); }
 
