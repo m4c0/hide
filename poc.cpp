@@ -44,8 +44,9 @@ class splash : voo::update_thread {
   sitime::stopwatch m_time{};
   sith::memfn_thread<splash> m_thread{this, &splash::run};
 
+  [[nodiscard]] auto time() const noexcept { return m_time.millis() / 1000.0; }
   [[nodiscard]] auto alpha() const noexcept {
-    float t = m_time.millis() / 1000.0;
+    float t = time();
     float a = 1.0;
     if (t < 1) {
       a = t;
@@ -82,7 +83,11 @@ public:
   }
   virtual ~splash() { vee::device_wait_idle(); }
 
-  [[nodiscard]] splash *next() noexcept { return this; }
+  [[nodiscard]] splash *next() noexcept {
+    if (time() > 3)
+      return new splash();
+    return this;
+  }
 
   void run(const voo::cmd_buf_one_time_submit &pcb) {
     quack::upc pc{
