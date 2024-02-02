@@ -28,65 +28,73 @@ import voo;
 // * Credits = just "author" and some OSS credits (tween in/out)
 // * Exit = duh
 
-class splash {
-  quack::pipeline_stuff m_ps;
-  quack::instance_batch m_ib;
-  jute::view m_file;
+struct globals {
+  voo::device_and_queue *dq;
+  voo::swapchain_and_stuff *sw;
+} g_g;
+
+class splash : voo::update_thread {
+  quack::pipeline_stuff m_ps{*g_g.dq, *g_g.sw, 1};
+  quack::instance_batch m_ib = m_ps.create_batch(1);
+
+  voo::sires_image m_img;
+  vee::sampler m_smp = vee::create_sampler(vee::nearest_sampler);
+  vee::descriptor_set m_dset;
+
   sitime::stopwatch m_time{};
-  sith::memfn_thread<splash> m_thread{this, &splash::run};
 
-  void run(sith::thread *) {
-    m_ib.load_atlas(m_file);
-    m_ib.set_count(1);
-
-    float t{};
-    while (t < 3 && !m_thread.interrupted()) {
-      t = m_time.millis() / 1000.0;
-      m_ib.map_multipliers([t](auto *ms) {
-        float a = 1.0;
-        if (t < 1) {
-          a = t;
-        } else if (t > 2) {
-          a = 3.0 - t;
-          if (a < 0)
-            a = 0;
-        }
-        ms[0] = {1, 1, 1, a};
-      });
+  [[nodiscard]] auto alpha() const noexcept {
+    float t = m_time.millis() / 1000.0;
+    float a = 1.0;
+    if (t < 1) {
+      a = t;
+    } else if (t > 2) {
+      a = 3.0 - t;
+      if (a < 0)
+        a = 0;
     }
+    return a;
+  }
+
+  void build_cmd_buf(vee::command_buffer cb) override {
+    auto a = alpha();
+    m_ib.map_multipliers([a](auto *ms) { *ms = {1, 1, 1, a}; });
+
+    voo::cmd_buf_one_time_submit pcb{cb};
+    m_ib.setup_copy(cb);
   }
 
 public:
-  splash(quack::pipeline_stuff &&ps, jute::view res)
-      : m_ps{traits::move(ps)}, m_ib{m_ps.create_batch(1)}, m_file{res} {
+  splash() : update_thread{g_g.dq}, m_img{"BrainF.png", g_g.dq} {
+    m_dset = m_ps.allocate_descriptor_set(m_img.iv(), *m_smp);
+    m_img.run_once();
+
     m_ib.map_all([](auto all) {
       all.positions[0] = {{0, 0}, {1, 1}};
-      all.multipliers[0] = {};
-      all.colours[0] = {};
+      all.multipliers[0] = {1, 1, 1, 1};
+      all.colours[0] = {0, 0, 0, 1};
       all.uvs[0] = {{0, 0}, {1, 1}};
     });
-    m_ib.center_at(0.5, 0.5);
-    m_ib.set_grid(1, 1);
-    m_ib.set_count(0);
-    m_thread.start();
+    run_once();
   }
-  ~splash() { vee::device_wait_idle(); }
+  virtual ~splash() { vee::device_wait_idle(); }
 
-  [[nodiscard]] splash *next() noexcept {
-    auto t = m_time.millis() / 1000.0;
-    if (t > 3) {
-      return new splash(traits::move(m_ps), "Lenna_(test_image).png");
-    }
-    return this;
-  }
+  [[nodiscard]] splash *next() noexcept { return this; }
 
-  void submit_buffers(vee::queue q) { m_ib.submit_buffers(q); }
-  void run(voo::swapchain_and_stuff &sw, vee::command_buffer cb) {
-    auto scb = sw.cmd_render_pass({
-        .command_buffer = cb,
+  void run(const voo::cmd_buf_one_time_submit &pcb) {
+    quack::upc pc{
+        .grid_pos = {0.5f, 0.5f},
+        .grid_size = {1.0f, 1.0f},
+    };
+
+    auto rp = g_g.sw->cmd_render_pass({
+        .command_buffer = *pcb,
         .clear_color = {{0, 0, 0, 1}},
     });
-    m_ps.run(*scb, m_ib);
+    m_ib.build_commands(*pcb);
+    m_ps.cmd_push_vert_frag_constants(*pcb, pc);
+    m_ps.cmd_bind_descriptor_set(*pcb, m_dset);
+    m_ps.run(*pcb, 1);
   }
 };
 
@@ -94,20 +102,18 @@ constexpr const auto max_batches = 100;
 class renderer : public voo::casein_thread {
 public:
   void run() override {
-    voo::device_and_queue dq{"quack", native_ptr()};
+    voo::device_and_queue dq{"hide", native_ptr()};
+    g_g.dq = &dq;
 
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
-
-      quack::pipeline_stuff ps{dq, sw, max_batches};
-
-      auto s = hai::uptr<splash>::make(traits::move(ps), "BrainF.png");
-
+      g_g.sw = &sw;
       release_init_lock();
-      extent_loop(dq, sw, [&] {
-        s->submit_buffers(dq.queue());
 
-        sw.one_time_submit(dq, [&](auto &pcb) { s->run(sw, *pcb); });
+      auto s = hai::uptr<splash>::make();
+
+      extent_loop(dq, sw, [&] {
+        sw.queue_one_time_submit(dq, [&](auto pcb) { s->run(pcb); });
 
         s.reset(s->next());
       });
