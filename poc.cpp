@@ -93,10 +93,12 @@ public:
   }
 
   void run(const voo::cmd_buf_one_time_submit &pcb) {
-    quack::upc pc{
-        .grid_pos = {0.5f, 0.5f},
-        .grid_size = {1.0f, 1.0f},
-    };
+    auto pc = quack::adjust_aspect(
+        {
+            .grid_pos = {0.5f, 0.5f},
+            .grid_size = {1.0f, 1.0f},
+        },
+        g_g.sw->aspect());
 
     auto rp = g_g.sw->cmd_render_pass({
         .command_buffer = *pcb,
