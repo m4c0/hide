@@ -68,8 +68,11 @@ class splash : voo::update_thread {
 
   using update_thread::run;
 
+protected:
+  virtual splash *create_next() noexcept = 0;
+
 public:
-  splash() : update_thread{g_g.dq}, m_img{"BrainF.png", g_g.dq} {
+  splash(jute::view name) : update_thread{g_g.dq}, m_img{name, g_g.dq} {
     m_dset = m_ps.allocate_descriptor_set(m_img.iv(), *m_smp);
     m_img.run_once();
 
@@ -85,7 +88,7 @@ public:
 
   [[nodiscard]] splash *next() noexcept {
     if (time() > 3)
-      return new splash();
+      return create_next();
     return this;
   }
 
@@ -106,6 +109,17 @@ public:
   }
 };
 
+struct splash_2 : splash {
+  splash_2() : splash{"Lenna_(test_image).png"} {}
+
+  splash *create_next() noexcept { return new splash_2{}; }
+};
+struct splash_1 : splash {
+  splash_1() : splash{"BrainF.png"} {}
+
+  splash *create_next() noexcept { return new splash_2{}; }
+};
+
 constexpr const auto max_batches = 100;
 class renderer : public voo::casein_thread {
 public:
@@ -118,7 +132,7 @@ public:
       g_g.sw = &sw;
       release_init_lock();
 
-      auto s = hai::uptr<splash>::make();
+      hai::uptr<splash> s{new splash_1{}};
 
       extent_loop(dq, sw, [&] {
         sw.queue_one_time_submit(dq, [&](auto pcb) { s->run(pcb); });
