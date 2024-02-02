@@ -76,8 +76,10 @@ public:
     m_dset = m_ps.allocate_descriptor_set(m_img.iv(), *m_smp);
     m_img.run_once();
 
-    m_ib.map_all([](auto all) {
-      all.positions[0] = {{0, 0}, {1, 1}};
+    m_ib.map_all([this](auto all) {
+      auto img_aspect = static_cast<float>(m_img.width()) /
+                        static_cast<float>(m_img.height());
+      all.positions[0] = {{-img_aspect / 2.f, 0}, {img_aspect, 1}};
       all.multipliers[0] = {1, 1, 1, 1};
       all.colours[0] = {0, 0, 0, 1};
       all.uvs[0] = {{0, 0}, {1, 1}};
@@ -95,7 +97,7 @@ public:
   void run(const voo::cmd_buf_one_time_submit &pcb) {
     auto pc = quack::adjust_aspect(
         {
-            .grid_pos = {0.5f, 0.5f},
+            .grid_pos = {0.0f, 0.5f},
             .grid_size = {1.0f, 1.0f},
         },
         g_g.sw->aspect());
