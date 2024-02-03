@@ -28,15 +28,11 @@ import voo;
 // * Credits = just "author" and some OSS credits (tween in/out)
 // * Exit = duh
 
-struct globals {
-  voo::device_and_queue *dq;
-  voo::swapchain_and_stuff *sw;
-} g_g;
-
 class splash : voo::update_thread {
-  quack::pipeline_stuff m_ps{*g_g.dq, *g_g.sw, 1};
-  quack::instance_batch m_ib = m_ps.create_batch(1);
+  quack::pipeline_stuff m_ps;
+  quack::instance_batch m_ib;
 
+  voo::swapchain_and_stuff *m_sw;
   voo::sires_image m_img;
   vee::sampler m_smp = vee::create_sampler(vee::nearest_sampler);
   vee::descriptor_set m_dset;
@@ -72,8 +68,12 @@ protected:
   virtual splash *create_next() noexcept = 0;
 
 public:
-  splash(jute::view name) : update_thread{g_g.dq}, m_img{name, g_g.dq} {
+  splash(voo::device_and_queue *dq, voo::swapchain_and_stuff *sw,
+         jute::view name)
+      : update_thread{dq}, m_ps{*dq, *sw, 1}, m_ib{m_ps.create_batch(1)},
+        m_sw{sw}, m_img{name, dq} {
     m_dset = m_ps.allocate_descriptor_set(m_img.iv(), *m_smp);
+
     m_img.run_once();
 
     m_ib.map_all([this](auto all) {
@@ -100,9 +100,9 @@ public:
             .grid_pos = {0.0f, 0.5f},
             .grid_size = {1.0f, 1.0f},
         },
-        g_g.sw->aspect());
+        m_sw->aspect());
 
-    auto rp = g_g.sw->cmd_render_pass({
+    auto rp = m_sw->cmd_render_pass({
         .command_buffer = *pcb,
         .clear_color = {{0, 0, 0, 1}},
     });
@@ -113,13 +113,18 @@ public:
   }
 };
 
+struct globals {
+  voo::device_and_queue *dq;
+  voo::swapchain_and_stuff *sw;
+} g_g;
+
 struct splash_2 : splash {
-  splash_2() : splash{"Lenna_(test_image).png"} {}
+  splash_2() : splash{g_g.dq, g_g.sw, "Lenna_(test_image).png"} {}
 
   splash *create_next() noexcept { return new splash_2{}; }
 };
 struct splash_1 : splash {
-  splash_1() : splash{"BrainF.png"} {}
+  splash_1() : splash{g_g.dq, g_g.sw, "BrainF.png"} {}
 
   splash *create_next() noexcept { return new splash_2{}; }
 };
