@@ -70,8 +70,11 @@ protected:
 public:
   splash(voo::device_and_queue *dq, voo::swapchain_and_stuff *sw,
          jute::view name)
-      : update_thread{dq}, m_ps{*dq, *sw, 1}, m_ib{m_ps.create_batch(1)},
-        m_sw{sw}, m_img{name, dq} {
+      : update_thread{dq}
+      , m_ps{*dq, *sw, 1}
+      , m_ib{m_ps.create_batch(1)}
+      , m_sw{sw}
+      , m_img{name, dq} {
     m_dset = m_ps.allocate_descriptor_set(m_img.iv(), *m_smp);
 
     m_img.run_once();
