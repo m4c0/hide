@@ -74,9 +74,8 @@ public:
       , m_ps{*dq, *sw, 1}
       , m_ib{m_ps.create_batch(1)}
       , m_sw{sw}
-      , m_img{name, dq} {
-    m_dset = m_ps.allocate_descriptor_set(m_img.iv(), *m_smp);
-
+      , m_img{name, dq}
+      , m_dset{m_ps.allocate_descriptor_set(m_img.iv(), *m_smp)} {
     m_img.run_once();
 
     m_ib.map_all([this](auto all) {
@@ -87,6 +86,7 @@ public:
       all.colours[0] = {0, 0, 0, 1};
       all.uvs[0] = {{0, 0}, {1, 1}};
     });
+
     m_thread.start();
   }
   virtual ~splash() = default;
