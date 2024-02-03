@@ -29,6 +29,7 @@ import voo;
 // * Exit = duh
 
 class splash : voo::update_thread {
+  voo::device_and_queue *m_dq;
   voo::sires_image m_img;
   vee::sampler m_smp = vee::create_sampler(vee::nearest_sampler);
 
@@ -64,11 +65,16 @@ class splash : voo::update_thread {
   using update_thread::run;
 
 protected:
+  [[nodiscard]] constexpr auto *device_and_queue() const noexcept {
+    return m_dq;
+  }
+
   virtual splash *create_next() noexcept = 0;
 
 public:
   splash(voo::device_and_queue *dq, jute::view name)
       : update_thread{dq}
+      , m_dq{dq}
       , m_img{name, dq}
       , m_ps{*dq, 1}
       , m_ib{m_ps.create_batch(1)}
@@ -114,34 +120,26 @@ public:
   }
 };
 
-struct globals {
-  voo::device_and_queue *dq;
-  voo::swapchain_and_stuff *sw;
-} g_g;
-
 struct splash_2 : splash {
-  splash_2() : splash{g_g.dq, "Lenna_(test_image).png"} {}
+  splash_2(voo::device_and_queue *dq) : splash{dq, "Lenna_(test_image).png"} {}
 
-  splash *create_next() noexcept { return new splash_2{}; }
+  splash *create_next() noexcept { return new splash_2{device_and_queue()}; }
 };
 struct splash_1 : splash {
-  splash_1() : splash{g_g.dq, "BrainF.png"} {}
+  splash_1(voo::device_and_queue *dq) : splash{dq, "BrainF.png"} {}
 
-  splash *create_next() noexcept { return new splash_2{}; }
+  splash *create_next() noexcept { return new splash_2{device_and_queue()}; }
 };
 
 class renderer : public voo::casein_thread {
 public:
   void run() override {
     voo::device_and_queue dq{"hide", native_ptr()};
-    g_g.dq = &dq;
+
+    hai::uptr<splash> s{new splash_1{&dq}};
 
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
-      g_g.sw = &sw;
-      release_init_lock();
-
-      hai::uptr<splash> s{new splash_1{}};
 
       extent_loop(dq, sw, [&] {
         sw.queue_one_time_submit(dq, [&](auto pcb) { s->run(&sw, pcb); });
