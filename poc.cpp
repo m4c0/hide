@@ -29,12 +29,11 @@ import voo;
 // * Exit = duh
 
 class splash : voo::update_thread {
-  quack::pipeline_stuff m_ps;
-  quack::instance_batch m_ib;
-
-  voo::swapchain_and_stuff *m_sw;
   voo::sires_image m_img;
   vee::sampler m_smp = vee::create_sampler(vee::nearest_sampler);
+
+  quack::pipeline_stuff m_ps;
+  quack::instance_batch m_ib;
   vee::descriptor_set m_dset;
 
   sitime::stopwatch m_time{};
@@ -68,13 +67,11 @@ protected:
   virtual splash *create_next() noexcept = 0;
 
 public:
-  splash(voo::device_and_queue *dq, voo::swapchain_and_stuff *sw,
-         jute::view name)
+  splash(voo::device_and_queue *dq, jute::view name)
       : update_thread{dq}
-      , m_ps{*dq, *sw, 1}
-      , m_ib{m_ps.create_batch(1)}
-      , m_sw{sw}
       , m_img{name, dq}
+      , m_ps{*dq, 1}
+      , m_ib{m_ps.create_batch(1)}
       , m_dset{m_ps.allocate_descriptor_set(m_img.iv(), *m_smp)} {
     m_img.run_once();
 
@@ -97,15 +94,16 @@ public:
     return this;
   }
 
-  void run(const voo::cmd_buf_one_time_submit &pcb) {
+  void run(voo::swapchain_and_stuff *sw,
+           const voo::cmd_buf_one_time_submit &pcb) {
     auto pc = quack::adjust_aspect(
         {
             .grid_pos = {0.0f, 0.5f},
             .grid_size = {1.0f, 1.0f},
         },
-        m_sw->aspect());
+        sw->aspect());
 
-    auto rp = m_sw->cmd_render_pass({
+    auto rp = sw->cmd_render_pass({
         .command_buffer = *pcb,
         .clear_color = {{0, 0, 0, 1}},
     });
@@ -122,17 +120,16 @@ struct globals {
 } g_g;
 
 struct splash_2 : splash {
-  splash_2() : splash{g_g.dq, g_g.sw, "Lenna_(test_image).png"} {}
+  splash_2() : splash{g_g.dq, "Lenna_(test_image).png"} {}
 
   splash *create_next() noexcept { return new splash_2{}; }
 };
 struct splash_1 : splash {
-  splash_1() : splash{g_g.dq, g_g.sw, "BrainF.png"} {}
+  splash_1() : splash{g_g.dq, "BrainF.png"} {}
 
   splash *create_next() noexcept { return new splash_2{}; }
 };
 
-constexpr const auto max_batches = 100;
 class renderer : public voo::casein_thread {
 public:
   void run() override {
@@ -147,7 +144,7 @@ public:
       hai::uptr<splash> s{new splash_1{}};
 
       extent_loop(dq, sw, [&] {
-        sw.queue_one_time_submit(dq, [&](auto pcb) { s->run(pcb); });
+        sw.queue_one_time_submit(dq, [&](auto pcb) { s->run(&sw, pcb); });
 
         s.reset(s->next());
       });
