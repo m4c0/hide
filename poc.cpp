@@ -40,7 +40,7 @@ public:
 class splash : voo::update_thread, public scene {
   voo::device_and_queue *m_dq;
   voo::sires_image m_img;
-  vee::sampler m_smp = vee::create_sampler(vee::nearest_sampler);
+  vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
 
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
