@@ -37,14 +37,31 @@ public:
                    const voo::cmd_buf_one_time_submit &pcb) = 0;
 };
 
+class image {
+  vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
+  voo::sires_image m_img;
+  vee::descriptor_set m_dset;
+
+public:
+  image(voo::device_and_queue *dq, quack::pipeline_stuff *ps, jute::view name)
+      : m_img{name, dq}
+      , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {
+    m_img.run_once();
+  }
+
+  [[nodiscard]] constexpr auto dset() const noexcept { return m_dset; }
+  [[nodiscard]] constexpr auto aspect() const noexcept {
+    return static_cast<float>(m_img.width()) /
+           static_cast<float>(m_img.height());
+  }
+};
+
 class splash : voo::update_thread, public scene {
   voo::device_and_queue *m_dq;
-  voo::sires_image m_img;
-  vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
 
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
-  vee::descriptor_set m_dset;
+  image m_img;
 
   sitime::stopwatch m_time{};
   sith::memfn_thread<splash> m_thread{this, &splash::run};
@@ -84,15 +101,11 @@ public:
   splash(voo::device_and_queue *dq, jute::view name)
       : update_thread{dq}
       , m_dq{dq}
-      , m_img{name, dq}
       , m_ps{*dq, 1}
       , m_ib{m_ps.create_batch(1)}
-      , m_dset{m_ps.allocate_descriptor_set(m_img.iv(), *m_smp)} {
-    m_img.run_once();
-
+      , m_img{dq, &m_ps, name} {
     m_ib.map_all([this](auto all) {
-      auto img_aspect = static_cast<float>(m_img.width()) /
-                        static_cast<float>(m_img.height());
+      auto img_aspect = m_img.aspect();
       all.positions[0] = {{-img_aspect / 2.f, 0}, {img_aspect, 1}};
       all.multipliers[0] = {1, 1, 1, 1};
       all.colours[0] = {0, 0, 0, 1};
@@ -124,18 +137,38 @@ public:
     });
     m_ib.build_commands(*pcb);
     m_ps.cmd_push_vert_frag_constants(*pcb, pc);
-    m_ps.cmd_bind_descriptor_set(*pcb, m_dset);
+    m_ps.cmd_bind_descriptor_set(*pcb, m_img.dset());
     m_ps.run(*pcb, 1);
   }
 };
 
 class main_menu : public scene {
+  quack::pipeline_stuff m_ps;
+  quack::instance_batch m_ib;
+
 public:
-  explicit main_menu(voo::device_and_queue *dq) {}
+  explicit main_menu(voo::device_and_queue *dq)
+      : m_ps{*dq, 1}
+      , m_ib{m_ps.create_batch(1)} {}
 
   scene *next() override { return this; }
   void run(voo::swapchain_and_stuff *sw,
-           const voo::cmd_buf_one_time_submit &pcb) override {}
+           const voo::cmd_buf_one_time_submit &pcb) override {
+    auto pc = quack::adjust_aspect(
+        {
+            .grid_pos = {0.0f, 0.5f},
+            .grid_size = {1.0f, 1.0f},
+        },
+        sw->aspect());
+
+    auto rp = sw->cmd_render_pass({
+        .command_buffer = *pcb,
+        .clear_color = {{0, 0, 0, 1}},
+    });
+    m_ib.build_commands(*pcb);
+    m_ps.cmd_push_vert_frag_constants(*pcb, pc);
+    m_ps.run(*pcb, 1);
+  }
 };
 
 struct splash_2 : splash {
