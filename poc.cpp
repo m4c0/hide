@@ -152,7 +152,15 @@ public:
   explicit main_menu(voo::device_and_queue *dq)
       : m_ps{*dq, 1}
       , m_ib{m_ps.create_batch(1)}
-      , m_logo{dq, &m_ps, "m3-game_title.png"} {}
+      , m_logo{dq, &m_ps, "m3-game_title.png"} {
+    m_ib.map_all([this](auto all) {
+      auto img_aspect = m_logo.aspect() * 0.75f;
+      all.positions[0] = {{-img_aspect / 2.f, 0}, {img_aspect, 0.75f}};
+      all.multipliers[0] = {1, 1, 1, 0.5};
+      all.colours[0] = {0, 0, 0, 1};
+      all.uvs[0] = {{0, 0}, {1, 1}};
+    });
+  }
 
   scene *next() override { return this; }
   void run(voo::swapchain_and_stuff *sw,
@@ -164,12 +172,15 @@ public:
         },
         sw->aspect());
 
+    m_ib.setup_copy(*pcb);
+
     auto rp = sw->cmd_render_pass({
         .command_buffer = *pcb,
         .clear_color = {{0, 0, 0, 1}},
     });
     m_ib.build_commands(*pcb);
     m_ps.cmd_push_vert_frag_constants(*pcb, pc);
+    m_ps.cmd_bind_descriptor_set(*pcb, m_logo.dset());
     m_ps.run(*pcb, 1);
   }
 };
