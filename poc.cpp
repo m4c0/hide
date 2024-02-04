@@ -1,6 +1,7 @@
 #pragma leco app
 #pragma leco add_resource "BrainF.png"
 #pragma leco add_resource "Lenna_(test_image).png"
+#pragma leco add_resource "m3-game_title.png"
 export module poc;
 
 import casein;
@@ -145,11 +146,13 @@ public:
 class main_menu : public scene {
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
+  image m_logo;
 
 public:
   explicit main_menu(voo::device_and_queue *dq)
       : m_ps{*dq, 1}
-      , m_ib{m_ps.create_batch(1)} {}
+      , m_ib{m_ps.create_batch(1)}
+      , m_logo{dq, &m_ps, "m3-game_title.png"} {}
 
   scene *next() override { return this; }
   void run(voo::swapchain_and_stuff *sw,
