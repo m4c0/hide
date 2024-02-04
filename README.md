@@ -12,4 +12,8 @@ a 512x512 classical image named [Lenna][lenna]. This is a copyrighted image not
 covered by the MIT license of this code. Therefore, if you want to use this
 project as-is, you need to deal with it.
 
+File whose name start with `m3-` are assets coming from [this Itch.io
+pack][match3] created by DevilWork.shop.
+
 [lenna]: https://en.wikipedia.org/wiki/Lenna
+[match3]: https://devilsworkshop.itch.io/match-3-free-2d-sprites-game-art-and-ui
