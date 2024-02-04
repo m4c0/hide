@@ -28,7 +28,16 @@ import voo;
 // * Credits = just "author" and some OSS credits (tween in/out)
 // * Exit = duh
 
-class splash : voo::update_thread {
+class scene {
+public:
+  virtual ~scene() = default;
+
+  virtual scene *next() = 0;
+  virtual void run(voo::swapchain_and_stuff *sw,
+                   const voo::cmd_buf_one_time_submit &pcb) = 0;
+};
+
+class splash : voo::update_thread, public scene {
   voo::device_and_queue *m_dq;
   voo::sires_image m_img;
   vee::sampler m_smp = vee::create_sampler(vee::nearest_sampler);
@@ -69,7 +78,7 @@ protected:
     return m_dq;
   }
 
-  virtual splash *create_next() noexcept = 0;
+  virtual scene *create_next() = 0;
 
 public:
   splash(voo::device_and_queue *dq, jute::view name)
@@ -94,14 +103,14 @@ public:
   }
   virtual ~splash() = default;
 
-  [[nodiscard]] splash *next() noexcept {
+  [[nodiscard]] scene *next() override {
     if (time() > 3)
       return create_next();
     return this;
   }
 
   void run(voo::swapchain_and_stuff *sw,
-           const voo::cmd_buf_one_time_submit &pcb) {
+           const voo::cmd_buf_one_time_submit &pcb) override {
     auto pc = quack::adjust_aspect(
         {
             .grid_pos = {0.0f, 0.5f},
@@ -120,15 +129,24 @@ public:
   }
 };
 
+class main_menu : public scene {
+public:
+  explicit main_menu(voo::device_and_queue *dq) {}
+
+  scene *next() override { return this; }
+  void run(voo::swapchain_and_stuff *sw,
+           const voo::cmd_buf_one_time_submit &pcb) override {}
+};
+
 struct splash_2 : splash {
   splash_2(voo::device_and_queue *dq) : splash{dq, "Lenna_(test_image).png"} {}
 
-  splash *create_next() noexcept { return new splash_2{device_and_queue()}; }
+  scene *create_next() override { return new main_menu{device_and_queue()}; }
 };
 struct splash_1 : splash {
   splash_1(voo::device_and_queue *dq) : splash{dq, "BrainF.png"} {}
 
-  splash *create_next() noexcept { return new splash_2{device_and_queue()}; }
+  scene *create_next() override { return new splash_2{device_and_queue()}; }
 };
 
 class renderer : public voo::casein_thread {
@@ -136,7 +154,7 @@ public:
   void run() override {
     voo::device_and_queue dq{"hide", native_ptr()};
 
-    hai::uptr<splash> s{new splash_1{&dq}};
+    hai::uptr<scene> s{new splash_1{&dq}};
 
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
