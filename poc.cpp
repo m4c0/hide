@@ -3,6 +3,7 @@
 #pragma leco add_resource "Lenna_(test_image).png"
 #pragma leco add_resource "m3-bg.png"
 #pragma leco add_resource "m3-game_title.png"
+#pragma leco add_resource "VictorMono-Regular.otf"
 export module poc;
 
 import casein;
@@ -15,6 +16,7 @@ import sith;
 import traits;
 import vee;
 import voo;
+import what_the_font;
 
 // Desired workflow:
 // * Splash screen (fade in/out)
@@ -29,6 +31,8 @@ import voo;
 //   - List TBD, but it must contain "fullscreen" and "audio volume"
 // * Credits = just "author" and some OSS credits (tween in/out)
 // * Exit = duh
+
+static wtf::library g_wtf{};
 
 class scene {
 public:
@@ -68,11 +72,18 @@ class texts : public voo::update_thread {
   }
 
 public:
-  texts(voo::device_and_queue *dq, quack::pipeline_stuff *ps, jute::view name)
+  texts(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
       : update_thread{dq}
       , m_img{*dq, 1024, 1024}
       , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {
+    wtf::face f = g_wtf.new_face("VictorMono-Regular.otf", 64);
     voo::mapmem m{m_img.host_memory()};
+    auto img = static_cast<unsigned char *>(*m);
+    f.shape_pt("New Game").draw(img, 1024, 1024, 0, 64);
+    f.shape_pt("Continue").draw(img, 1024, 1024, 0, 64 * 2);
+    f.shape_pt("Options").draw(img, 1024, 1024, 0, 64 * 3);
+    f.shape_pt("Credits").draw(img, 1024, 1024, 0, 64 * 4);
+    f.shape_pt("Exit").draw(img, 1024, 1024, 0, 64 * 5);
   }
 
   [[nodiscard]] constexpr auto dset() const noexcept { return m_dset; }
@@ -171,15 +182,19 @@ class main_menu : public scene {
   quack::instance_batch m_ib;
   image m_bg;
   image m_logo;
+  texts m_texts;
+
+  static constexpr const auto max_sprites = 3;
 
 public:
   explicit main_menu(voo::device_and_queue *dq)
-      : m_ps{*dq, 2}
-      , m_ib{m_ps.create_batch(2)}
+      : m_ps{*dq, 3}
+      , m_ib{m_ps.create_batch(max_sprites)}
       , m_bg{dq, &m_ps, "m3-bg.png"}
-      , m_logo{dq, &m_ps, "m3-game_title.png"} {
+      , m_logo{dq, &m_ps, "m3-game_title.png"}
+      , m_texts{dq, &m_ps} {
     m_ib.map_all([](auto all) {
-      for (auto i = 0; i < 2; i++) {
+      for (auto i = 0; i < max_sprites; i++) {
         all.multipliers[i] = {1, 1, 1, 1};
         all.colours[i] = {0, 0, 0, 0};
         all.uvs[i] = {{0, 0}, {1, 1}};
@@ -191,7 +206,11 @@ public:
 
       auto img_aspect = m_logo.aspect() * 0.75f;
       ps[1] = {{-img_aspect / 2.f, 0}, {img_aspect, 0.75f}};
+
+      ps[2] = {{-0.5f, 0.0f}, {0.5f, 0.5f}};
     });
+
+    m_texts.run_once();
   }
 
   scene *next() override { return this; }
@@ -212,10 +231,15 @@ public:
     });
     m_ib.build_commands(*pcb);
     m_ps.cmd_push_vert_frag_constants(*pcb, pc);
+
     m_ps.cmd_bind_descriptor_set(*pcb, m_bg.dset());
     m_ps.run(*pcb, 1, 0);
+
     m_ps.cmd_bind_descriptor_set(*pcb, m_logo.dset());
     m_ps.run(*pcb, 1, 1);
+
+    m_ps.cmd_bind_descriptor_set(*pcb, m_texts.dset());
+    m_ps.run(*pcb, 1, 2);
   }
 };
 
