@@ -3,6 +3,7 @@
 #pragma leco add_resource "Lenna_(test_image).png"
 #pragma leco add_resource "m3-bg.png"
 #pragma leco add_resource "m3-game_title.png"
+#pragma leco add_resource "m3-storeCounter_bar.png"
 #pragma leco add_resource "VictorMono-Regular.otf"
 export module poc;
 
@@ -183,16 +184,19 @@ class main_menu : public scene {
   quack::instance_batch m_ib;
   image m_bg;
   image m_logo;
+  image m_sel;
   texts m_texts;
 
-  static constexpr const auto max_sprites = 7;
+  static constexpr const auto max_dset = 4;
+  static constexpr const auto max_sprites = 8;
 
 public:
   explicit main_menu(voo::device_and_queue *dq)
-      : m_ps{*dq, 3}
+      : m_ps{*dq, max_dset}
       , m_ib{m_ps.create_batch(max_sprites)}
       , m_bg{dq, &m_ps, "m3-bg.png"}
       , m_logo{dq, &m_ps, "m3-game_title.png"}
+      , m_sel{dq, &m_ps, "m3-storeCounter_bar.png"}
       , m_texts{dq, &m_ps} {
     m_ib.map_all([](auto all) {
       for (auto i = 0; i < max_sprites; i++) {
@@ -205,14 +209,19 @@ public:
       for (auto i = 0; i < 5; i++) {
         all.uvs[2 + i] = {{0.0f, i * 0.125f}, {0.75f, (i + 1) * 0.125f}};
       }
+      all.uvs[7] = {{0.2f, 0.2f}, {0.8f, 0.8f}};
     });
 
-    m_ib.map_positions([](auto *ps) {
+    m_ib.map_positions([this](auto *ps) {
       ps[0] = {{-2.f, -2.f}, {4.f, 4.f}};
       ps[1] = {{-0.25f, 0}, {0.5f, 0.5f}};
       for (auto i = 0; i < 5; i++) {
         ps[2 + i] = {{-0.25f, 0.5f + i * 0.0625f}, {0.5f, 0.0625f}};
       }
+
+      constexpr const auto sel_h = 0.25f;
+      auto sel_w = sel_h * m_sel.aspect();
+      ps[7] = {{-sel_w * 0.5f, 0.5f}, {sel_w, sel_h}};
     });
 
     m_texts.run_once();
@@ -242,6 +251,9 @@ public:
 
     m_ps.cmd_bind_descriptor_set(*pcb, m_logo.dset());
     m_ps.run(*pcb, 1, 1);
+
+    m_ps.cmd_bind_descriptor_set(*pcb, m_sel.dset());
+    m_ps.run(*pcb, 1, 7);
 
     m_ps.cmd_bind_descriptor_set(*pcb, m_texts.dset());
     m_ps.run(*pcb, 5, 2);
