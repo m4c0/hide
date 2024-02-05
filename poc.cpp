@@ -185,7 +185,7 @@ class main_menu : public scene {
   image m_logo;
   texts m_texts;
 
-  static constexpr const auto max_sprites = 3;
+  static constexpr const auto max_sprites = 7;
 
 public:
   explicit main_menu(voo::device_and_queue *dq)
@@ -198,17 +198,21 @@ public:
       for (auto i = 0; i < max_sprites; i++) {
         all.multipliers[i] = {1, 1, 1, 1};
         all.colours[i] = {0, 0, 0, 0};
-        all.uvs[i] = {{0, 0}, {1, 1}};
+      }
+
+      all.uvs[0] = {{0, 0}, {1, 1}};
+      all.uvs[1] = {{0.2f, 0.2f}, {0.8f, 0.8f}};
+      for (auto i = 0; i < 5; i++) {
+        all.uvs[2 + i] = {{0.0f, i * 0.125f}, {0.75f, (i + 1) * 0.125f}};
       }
     });
 
-    m_ib.map_positions([this](auto *ps) {
+    m_ib.map_positions([](auto *ps) {
       ps[0] = {{-2.f, -2.f}, {4.f, 4.f}};
-
-      auto img_aspect = m_logo.aspect() * 0.75f;
-      ps[1] = {{-img_aspect / 2.f, 0}, {img_aspect, 0.75f}};
-
-      ps[2] = {{-0.5f, 0.75}, {0.5f, 0.5f}};
+      ps[1] = {{-0.25f, 0}, {0.5f, 0.5f}};
+      for (auto i = 0; i < 5; i++) {
+        ps[2 + i] = {{-0.25f, 0.5f + i * 0.0625f}, {0.5f, 0.0625f}};
+      }
     });
 
     m_texts.run_once();
@@ -240,7 +244,7 @@ public:
     m_ps.run(*pcb, 1, 1);
 
     m_ps.cmd_bind_descriptor_set(*pcb, m_texts.dset());
-    m_ps.run(*pcb, 1, 2);
+    m_ps.run(*pcb, 5, 2);
   }
 };
 
