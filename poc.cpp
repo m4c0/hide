@@ -76,14 +76,15 @@ public:
       : update_thread{dq}
       , m_img{*dq, 1024, 1024, false}
       , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {
-    wtf::face f = g_wtf.new_face("VictorMono-Regular.otf", 64);
+    constexpr const auto font_h = 128;
+    wtf::face f = g_wtf.new_face("VictorMono-Regular.otf", font_h);
     voo::mapmem m{m_img.host_memory()};
     auto img = static_cast<unsigned char *>(*m);
-    f.shape_pt("New Game").draw(img, 1024, 1024, 0, 64);
-    f.shape_pt("Continue").draw(img, 1024, 1024, 0, 64 * 2);
-    f.shape_pt("Options").draw(img, 1024, 1024, 0, 64 * 3);
-    f.shape_pt("Credits").draw(img, 1024, 1024, 0, 64 * 4);
-    f.shape_pt("Exit").draw(img, 1024, 1024, 0, 64 * 5);
+    f.shape_pt("New Game").draw(img, 1024, 1024, 0, font_h);
+    f.shape_pt("Continue").draw(img, 1024, 1024, 0, font_h * 2);
+    f.shape_pt("Options").draw(img, 1024, 1024, 0, font_h * 3);
+    f.shape_pt("Credits").draw(img, 1024, 1024, 0, font_h * 4);
+    f.shape_pt("Exit").draw(img, 1024, 1024, 0, font_h * 5);
   }
 
   [[nodiscard]] constexpr auto dset() const noexcept { return m_dset; }
@@ -207,7 +208,7 @@ public:
       auto img_aspect = m_logo.aspect() * 0.75f;
       ps[1] = {{-img_aspect / 2.f, 0}, {img_aspect, 0.75f}};
 
-      ps[2] = {{-0.5f, 0.0f}, {0.5f, 0.5f}};
+      ps[2] = {{-0.5f, 0.75}, {0.5f, 0.5f}};
     });
 
     m_texts.run_once();
