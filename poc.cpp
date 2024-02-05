@@ -74,7 +74,7 @@ class texts : public voo::update_thread {
 public:
   texts(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
       : update_thread{dq}
-      , m_img{*dq, 1024, 1024}
+      , m_img{*dq, 1024, 1024, false}
       , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {
     wtf::face f = g_wtf.new_face("VictorMono-Regular.otf", 64);
     voo::mapmem m{m_img.host_memory()};
