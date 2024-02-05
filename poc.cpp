@@ -205,11 +205,11 @@ public:
       }
 
       all.uvs[0] = {{0, 0}, {1, 1}};
-      all.uvs[1] = {{0.2f, 0.2f}, {0.8f, 0.8f}};
+      all.uvs[1] = {{0, 0}, {1, 1}};
       for (auto i = 0; i < 5; i++) {
         all.uvs[2 + i] = {{0.0f, i * 0.125f}, {0.75f, (i + 1) * 0.125f}};
       }
-      all.uvs[7] = {{0.2f, 0.2f}, {0.8f, 0.8f}};
+      all.uvs[7] = {{0, 0}, {1, 1}};
     });
 
     m_ib.map_positions([this](auto *ps) {
