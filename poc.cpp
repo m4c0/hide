@@ -156,17 +156,19 @@ public:
       , m_ib{m_ps.create_batch(2)}
       , m_bg{dq, &m_ps, "m3-bg.png"}
       , m_logo{dq, &m_ps, "m3-game_title.png"} {
-    m_ib.map_all([this](auto all) {
-      all.positions[0] = {{-2.f, -2.f}, {4.f, 4.f}};
-      all.multipliers[0] = {1, 1, 1, 1};
-      all.colours[0] = {0, 0, 0, 1};
-      all.uvs[0] = {{0, 0}, {1, 1}};
+    m_ib.map_all([](auto all) {
+      for (auto i = 0; i < 2; i++) {
+        all.multipliers[i] = {1, 1, 1, 1};
+        all.colours[i] = {0, 0, 0, 0};
+        all.uvs[i] = {{0, 0}, {1, 1}};
+      }
+    });
+
+    m_ib.map_positions([this](auto *ps) {
+      ps[0] = {{-2.f, -2.f}, {4.f, 4.f}};
 
       auto img_aspect = m_logo.aspect() * 0.75f;
-      all.positions[1] = {{-img_aspect / 2.f, 0}, {img_aspect, 0.75f}};
-      all.multipliers[1] = {1, 1, 1, 1};
-      all.colours[1] = {0, 0, 0, 0};
-      all.uvs[1] = {{0, 0}, {1, 1}};
+      ps[1] = {{-img_aspect / 2.f, 0}, {img_aspect, 0.75f}};
     });
   }
 
