@@ -57,6 +57,28 @@ public:
            static_cast<float>(m_img.height());
   }
 };
+class texts : public voo::update_thread {
+  vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
+  voo::h2l_image m_img;
+  vee::descriptor_set m_dset;
+
+  void build_cmd_buf(vee::command_buffer cb) override {
+    voo::cmd_buf_one_time_submit pcb{cb};
+    m_img.setup_copy(cb);
+  }
+
+public:
+  texts(voo::device_and_queue *dq, quack::pipeline_stuff *ps, jute::view name)
+      : update_thread{dq}
+      , m_img{*dq, 1024, 1024}
+      , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {
+    voo::mapmem m{m_img.host_memory()};
+  }
+
+  [[nodiscard]] constexpr auto dset() const noexcept { return m_dset; }
+
+  using update_thread::run_once;
+};
 
 class splash : voo::update_thread, public scene {
   voo::device_and_queue *m_dq;
