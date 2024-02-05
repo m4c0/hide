@@ -165,7 +165,7 @@ public:
       auto img_aspect = m_logo.aspect() * 0.75f;
       all.positions[1] = {{-img_aspect / 2.f, 0}, {img_aspect, 0.75f}};
       all.multipliers[1] = {1, 1, 1, 1};
-      all.colours[1] = {0, 0, 0, 1};
+      all.colours[1] = {0, 0, 0, 0};
       all.uvs[1] = {{0, 0}, {1, 1}};
     });
   }
@@ -188,8 +188,10 @@ public:
     });
     m_ib.build_commands(*pcb);
     m_ps.cmd_push_vert_frag_constants(*pcb, pc);
+    m_ps.cmd_bind_descriptor_set(*pcb, m_bg.dset());
+    m_ps.run(*pcb, 1, 0);
     m_ps.cmd_bind_descriptor_set(*pcb, m_logo.dset());
-    m_ps.run(*pcb, 2);
+    m_ps.run(*pcb, 1, 1);
   }
 };
 
