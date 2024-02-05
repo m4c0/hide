@@ -61,6 +61,10 @@ public:
     return static_cast<float>(m_img.width()) /
            static_cast<float>(m_img.height());
   }
+
+  [[nodiscard]] constexpr auto size(float h) const noexcept {
+    return quack::size{h * aspect(), h};
+  }
 };
 class texts : public voo::update_thread {
   vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
@@ -214,14 +218,17 @@ public:
 
     m_ib.map_positions([this](auto *ps) {
       ps[0] = {{-2.f, -2.f}, {4.f, 4.f}};
-      ps[1] = {{-0.25f, 0}, {0.5f, 0.5f}};
+      ps[1] = {{0, 0}, m_logo.size(0.5f)};
+
       for (auto i = 0; i < 5; i++) {
-        ps[2 + i] = {{-0.25f, 0.5f + i * 0.0625f}, {0.5f, 0.0625f}};
+        ps[2 + i] = {{0, 0.5f + i * 0.0625f}, {0.5f, 0.0625f}};
       }
 
-      constexpr const auto sel_h = 0.25f;
-      auto sel_w = sel_h * m_sel.aspect();
-      ps[7] = {{-sel_w * 0.5f, 0.5f}, {sel_w, sel_h}};
+      ps[7] = {{0, 0.5f}, m_sel.size(0.0625f)};
+
+      for (auto i = 0; i < max_sprites; i++) {
+        ps[i].x = -ps[i].w / 2.0f;
+      }
     });
 
     m_texts.run_once();
