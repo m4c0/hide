@@ -1,6 +1,7 @@
 #pragma leco app
 #pragma leco add_resource "BrainF.png"
 #pragma leco add_resource "Lenna_(test_image).png"
+#pragma leco add_resource "m3-bg.png"
 #pragma leco add_resource "m3-game_title.png"
 export module poc;
 
@@ -146,19 +147,26 @@ public:
 class main_menu : public scene {
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
+  image m_bg;
   image m_logo;
 
 public:
   explicit main_menu(voo::device_and_queue *dq)
-      : m_ps{*dq, 1}
-      , m_ib{m_ps.create_batch(1)}
+      : m_ps{*dq, 2}
+      , m_ib{m_ps.create_batch(2)}
+      , m_bg{dq, &m_ps, "m3-bg.png"}
       , m_logo{dq, &m_ps, "m3-game_title.png"} {
     m_ib.map_all([this](auto all) {
-      auto img_aspect = m_logo.aspect() * 0.75f;
-      all.positions[0] = {{-img_aspect / 2.f, 0}, {img_aspect, 0.75f}};
-      all.multipliers[0] = {1, 1, 1, 0.5};
+      all.positions[0] = {{-2.f, -2.f}, {4.f, 4.f}};
+      all.multipliers[0] = {1, 1, 1, 1};
       all.colours[0] = {0, 0, 0, 1};
       all.uvs[0] = {{0, 0}, {1, 1}};
+
+      auto img_aspect = m_logo.aspect() * 0.75f;
+      all.positions[1] = {{-img_aspect / 2.f, 0}, {img_aspect, 0.75f}};
+      all.multipliers[1] = {1, 1, 1, 1};
+      all.colours[1] = {0, 0, 0, 1};
+      all.uvs[1] = {{0, 0}, {1, 1}};
     });
   }
 
@@ -181,7 +189,7 @@ public:
     m_ib.build_commands(*pcb);
     m_ps.cmd_push_vert_frag_constants(*pcb, pc);
     m_ps.cmd_bind_descriptor_set(*pcb, m_logo.dset());
-    m_ps.run(*pcb, 1);
+    m_ps.run(*pcb, 2);
   }
 };
 
