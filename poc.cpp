@@ -194,10 +194,14 @@ class main_menu : voo::update_thread, public scene {
   texts m_texts;
   sith::memfn_thread<main_menu> m_thread{this, &main_menu::run};
 
+  unsigned m_idx{};
+
   static constexpr const auto max_dset = 4;
   static constexpr const auto max_sprites = 8;
 
   void build_cmd_buf(vee::command_buffer cb) override {
+    m_ib.map_positions([this](auto *ps) { ps[7] = ps[m_idx + 2]; });
+
     voo::cmd_buf_one_time_submit pcb{cb};
     m_ib.setup_copy(cb);
   }
@@ -235,7 +239,7 @@ public:
         ps[2 + i] = {{0, 0.5f + i * 0.0625f}, {0.5f, 0.0625f}};
       }
 
-      ps[7] = {{0, 0.5f}, m_sel.size(0.0625f)};
+      ps[7] = {};
 
       for (auto i = 0; i < max_sprites; i++) {
         ps[i].x = -ps[i].w / 2.0f;
@@ -275,6 +279,13 @@ public:
 
     m_ps.cmd_bind_descriptor_set(*pcb, m_texts.dset());
     m_ps.run(*pcb, 5, 2);
+  }
+
+  void key_down(casein::keys k) override {
+    if (k == casein::K_DOWN)
+      m_idx = (m_idx + 1) % 5;
+    if (k == casein::K_UP)
+      m_idx = (m_idx + 4) % 5;
   }
 };
 
