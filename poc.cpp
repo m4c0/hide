@@ -197,10 +197,20 @@ class main_menu : voo::update_thread, public scene {
   unsigned m_idx{};
 
   static constexpr const auto max_dset = 4;
-  static constexpr const auto max_sprites = 8;
+  static constexpr const auto max_sprites = 2 + 5 + 9;
+  static constexpr const auto sel_border = 0.01f;
 
   void build_cmd_buf(vee::command_buffer cb) override {
-    m_ib.map_positions([this](auto *ps) { ps[7] = ps[m_idx + 2]; });
+    m_ib.map_positions([this](auto *ps) {
+      auto p = ps[m_idx + 2];
+      ps[7] = p;
+
+      ps[8].x = ps[9].x = ps[10].x = p.x - sel_border;
+
+      ps[8].y = p.y - sel_border;
+      ps[9].y = p.y;
+      ps[10].y = p.y + p.h;
+    });
 
     voo::cmd_buf_one_time_submit pcb{cb};
     m_ib.setup_copy(cb);
@@ -228,7 +238,11 @@ public:
       for (auto i = 0; i < 5; i++) {
         all.uvs[2 + i] = {{0.0f, i * 0.125f}, {0.75f, (i + 1) * 0.125f}};
       }
-      all.uvs[7] = {{0, 0}, {1, 1}};
+
+      all.uvs[7] = {{0.25f, 0.25f}, {0.75f, 0.75f}};
+      all.uvs[8] = {{0.00f, 0.00f}, {0.25f, 0.25f}};
+      all.uvs[9] = {{0.00f, 0.25f}, {0.25f, 0.75f}};
+      all.uvs[10] = {{0.00f, 0.75f}, {0.15f, 1.00f}};
     });
 
     m_ib.map_positions([this](auto *ps) {
@@ -236,10 +250,10 @@ public:
 
       ps[1] = {{0, 0}, m_logo.size(0.5f)};
       for (auto i = 0; i < 5; i++) {
-        ps[2 + i] = {{0, 0.5f + i * 0.0625f}, {0.5f, 0.0625f}};
+        ps[2 + i] = {{0, 0.05f + 0.5f + i * 0.0625f}, {0.5f, 0.0625f}};
       }
 
-      auto h = 1.f;
+      auto h = 1.f - 0.05f;
       for (auto i = 1; i < 7; i++) {
         ps[i].x = -ps[i].w / 2.0f;
         h -= ps[i].h;
@@ -249,6 +263,8 @@ public:
       }
 
       ps[7] = {};
+      ps[8] = ps[10] = {{}, {sel_border, sel_border}};
+      ps[9] = {{}, {sel_border, 0.0625f}};
     });
 
     m_texts.run_once();
@@ -280,7 +296,7 @@ public:
     m_ps.run(*pcb, 1, 1);
 
     m_ps.cmd_bind_descriptor_set(*pcb, m_sel.dset());
-    m_ps.run(*pcb, 1, 7);
+    m_ps.run(*pcb, 4, 7);
 
     m_ps.cmd_bind_descriptor_set(*pcb, m_texts.dset());
     m_ps.run(*pcb, 5, 2);
