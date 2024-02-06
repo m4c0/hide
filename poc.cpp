@@ -183,20 +183,29 @@ public:
   }
 };
 
-class main_menu : public scene {
+class main_menu : voo::update_thread, public scene {
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
   image m_bg;
   image m_logo;
   image m_sel;
   texts m_texts;
+  sith::memfn_thread<main_menu> m_thread{this, &main_menu::run};
 
   static constexpr const auto max_dset = 4;
   static constexpr const auto max_sprites = 8;
 
+  void build_cmd_buf(vee::command_buffer cb) override {
+    voo::cmd_buf_one_time_submit pcb{cb};
+    m_ib.setup_copy(cb);
+  }
+
+  using update_thread::run;
+
 public:
   explicit main_menu(voo::device_and_queue *dq)
-      : m_ps{*dq, max_dset}
+      : update_thread{dq}
+      , m_ps{*dq, max_dset}
       , m_ib{m_ps.create_batch(max_sprites)}
       , m_bg{dq, &m_ps, "m3-bg.png"}
       , m_logo{dq, &m_ps, "m3-game_title.png"}
@@ -232,6 +241,8 @@ public:
     });
 
     m_texts.run_once();
+
+    m_thread.start();
   }
 
   scene *next() override { return this; }
@@ -243,8 +254,6 @@ public:
             .grid_size = {1.0f, 1.0f},
         },
         sw->aspect());
-
-    m_ib.setup_copy(*pcb);
 
     auto rp = sw->cmd_render_pass({
         .command_buffer = *pcb,
