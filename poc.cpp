@@ -42,6 +42,8 @@ public:
   virtual scene *next() = 0;
   virtual void run(voo::swapchain_and_stuff *sw,
                    const voo::cmd_buf_one_time_submit &pcb) = 0;
+
+  virtual void key_down(casein::keys k) {}
 };
 
 class image {
@@ -288,11 +290,15 @@ struct splash_1 : splash {
 };
 
 class renderer : public voo::casein_thread {
+  hai::uptr<scene> *m_s;
+
 public:
   void run() override {
     voo::device_and_queue dq{"hide", native_ptr()};
 
-    hai::uptr<scene> s{new splash_1{&dq}};
+    hai::uptr<scene> s{new main_menu{&dq}};
+    m_s = &s;
+    release_init_lock();
 
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
@@ -303,6 +309,11 @@ public:
         s.reset(s->next());
       });
     }
+  }
+
+  void key_down(const casein::events::key_down &e) override {
+    wait_init();
+    (*m_s)->key_down(*e);
   }
 
   static auto &instance() {
