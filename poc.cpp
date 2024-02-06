@@ -206,10 +206,12 @@ class main_menu : voo::update_thread, public scene {
       ps[7] = p;
 
       ps[8].x = ps[9].x = ps[10].x = p.x - sel_border;
+      ps[14].x = ps[15].x = p.x;
+      ps[11].x = ps[12].x = ps[13].x = p.x + p.w;
 
-      ps[8].y = p.y - sel_border;
-      ps[9].y = p.y;
-      ps[10].y = p.y + p.h;
+      ps[8].y = ps[11].y = ps[14].y = p.y - sel_border;
+      ps[9].y = ps[12].y = p.y;
+      ps[10].y = ps[13].y = ps[15].y = p.y + p.h;
     });
 
     voo::cmd_buf_one_time_submit pcb{cb};
@@ -242,7 +244,12 @@ public:
       all.uvs[7] = {{0.25f, 0.25f}, {0.75f, 0.75f}};
       all.uvs[8] = {{0.00f, 0.00f}, {0.25f, 0.25f}};
       all.uvs[9] = {{0.00f, 0.25f}, {0.25f, 0.75f}};
-      all.uvs[10] = {{0.00f, 0.75f}, {0.15f, 1.00f}};
+      all.uvs[10] = {{0.00f, 0.75f}, {0.25f, 1.00f}};
+      all.uvs[11] = {{0.75f, 0.00f}, {1.00f, 0.25f}};
+      all.uvs[12] = {{0.75f, 0.25f}, {1.00f, 0.75f}};
+      all.uvs[13] = {{0.75f, 0.75f}, {1.00f, 1.00f}};
+      all.uvs[14] = {{0.25f, 0.00f}, {0.75f, 0.25f}};
+      all.uvs[15] = {{0.25f, 0.75f}, {0.75f, 1.00f}};
     });
 
     m_ib.map_positions([this](auto *ps) {
@@ -263,8 +270,9 @@ public:
       }
 
       ps[7] = {};
-      ps[8] = ps[10] = {{}, {sel_border, sel_border}};
-      ps[9] = {{}, {sel_border, 0.0625f}};
+      ps[8] = ps[10] = ps[11] = ps[13] = {{}, {sel_border, sel_border}};
+      ps[9] = ps[12] = {{}, {sel_border, 0.0625f}};
+      ps[14] = ps[15] = {{}, {0.5f, sel_border}};
     });
 
     m_texts.run_once();
@@ -296,7 +304,7 @@ public:
     m_ps.run(*pcb, 1, 1);
 
     m_ps.cmd_bind_descriptor_set(*pcb, m_sel.dset());
-    m_ps.run(*pcb, 4, 7);
+    m_ps.run(*pcb, 9, 7);
 
     m_ps.cmd_bind_descriptor_set(*pcb, m_texts.dset());
     m_ps.run(*pcb, 5, 2);
