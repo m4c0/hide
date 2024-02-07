@@ -202,6 +202,12 @@ class main_menu : voo::update_thread, public scene {
   static constexpr const auto sel_border = 0.01f;
 
   void build_cmd_buf(vee::command_buffer cb) override {
+    auto a = alpha();
+    m_ib.map_multipliers([a](auto *ms) {
+      for (auto i = 0; i < max_sprites; i++)
+        ms[i] = {1, 1, 1, a};
+    });
+
     m_ib.map_positions([this](auto *ps) {
       auto p = ps[m_idx + 2];
       ps[7] = p;
@@ -220,7 +226,7 @@ class main_menu : voo::update_thread, public scene {
   }
 
   [[nodiscard]] auto time() const noexcept { return m_time.millis() / 1000.0; }
-  [[nodiscard]] auto alpha() const noexcept {
+  [[nodiscard]] float alpha() const noexcept {
     float t = time();
     return t < 1 ? t : 1.0f;
   }
