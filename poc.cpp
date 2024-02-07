@@ -216,7 +216,7 @@ class main_menu : public scene {
       }
 
       if (!m_has_save) {
-        ms[3] = {1, 1, 1, a};
+        ms[3] = {0.6, 0.5, 0.5, a};
       }
     });
 
