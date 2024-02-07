@@ -202,9 +202,14 @@ class main_menu : public scene {
 
   void build_cmd_buf(vee::command_buffer cb) override {
     auto a = alpha();
-    m_ib.map_multipliers([a](auto *ms) {
+    m_ib.map_multipliers([this, a](auto *ms) {
       for (auto i = 0; i < max_sprites; i++)
         ms[i] = {1, 1, 1, a};
+
+      for (auto i = 2; i < 7; i++) {
+        float n = (m_idx == i - 2) ? 0 : 1;
+        ms[i] = {n, 0, 0, a};
+      }
     });
 
     m_ib.map_positions([this](auto *ps) {
