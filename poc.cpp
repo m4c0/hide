@@ -193,7 +193,9 @@ class main_menu : public scene {
   image m_logo;
   image m_sel;
   texts m_texts;
+
   sitime::stopwatch m_time{};
+  scene *m_next = this;
 
   bool m_has_save{};
   unsigned m_idx{};
@@ -305,7 +307,7 @@ public:
     m_texts.run_once();
   }
 
-  scene *next() override { return this; }
+  scene *next() override { return m_next; }
   void run(voo::swapchain_and_stuff *sw,
            const voo::cmd_buf_one_time_submit &pcb) override {
     auto pc = quack::adjust_aspect(
@@ -344,6 +346,8 @@ public:
         m_idx = (m_idx + 1) % 5;
       if (k == casein::K_UP)
         m_idx = (m_idx + 4) % 5;
+      if (k == casein::K_ENTER)
+        m_next = new main_menu{device_and_queue(), !m_has_save};
     } while (!m_has_save && m_idx == 1);
   }
 };
