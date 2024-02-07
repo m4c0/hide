@@ -36,9 +36,17 @@ import what_the_font;
 static wtf::library g_wtf{};
 
 class scene : public voo::update_thread {
+  voo::device_and_queue *m_dq;
+
+protected:
+  [[nodiscard]] constexpr auto *device_and_queue() const noexcept {
+    return m_dq;
+  }
+
 public:
+  scene(voo::device_and_queue *dq) : update_thread{dq}, m_dq{dq} {}
+
   using update_thread::run;
-  using update_thread::update_thread;
 
   virtual ~scene() = default;
 
@@ -104,8 +112,6 @@ public:
 };
 
 class splash : public scene {
-  voo::device_and_queue *m_dq;
-
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
   image m_img;
@@ -137,16 +143,11 @@ class splash : public scene {
   using update_thread::run;
 
 protected:
-  [[nodiscard]] constexpr auto *device_and_queue() const noexcept {
-    return m_dq;
-  }
-
   virtual scene *create_next() = 0;
 
 public:
   splash(voo::device_and_queue *dq, jute::view name)
       : scene{dq}
-      , m_dq{dq}
       , m_ps{*dq, 1}
       , m_ib{m_ps.create_batch(1)}
       , m_img{dq, &m_ps, name} {
