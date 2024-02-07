@@ -250,7 +250,7 @@ public:
       all.uvs[0] = {{0, 0}, {1, 1}};
       all.uvs[1] = {{0, 0}, {1, 1}};
       for (auto i = 0; i < 5; i++) {
-        all.uvs[2 + i] = {{0.0f, i * 0.125f}, {0.75f, (i + 1) * 0.125f}};
+        all.uvs[2 + i] = {{0.0f, i * 0.125f}, {0.45f, (i + 1) * 0.125f}};
       }
 
       all.uvs[7] = {{0.25f, 0.25f}, {0.75f, 0.75f}};
@@ -265,11 +265,14 @@ public:
     });
 
     m_ib.map_positions([this](auto *ps) {
+      constexpr const auto menu_w = 0.25f;
+      constexpr const auto menu_h = 0.0625f;
+
       ps[0] = {{-2.f, -2.f}, {4.f, 4.f}};
 
       ps[1] = {{0, 0}, m_logo.size(0.5f)};
       for (auto i = 0; i < 5; i++) {
-        ps[2 + i] = {{0, 0.05f + 0.5f + i * 0.0625f}, {0.5f, 0.0625f}};
+        ps[2 + i] = {{0, 0.05f + 0.5f + i * 0.0625f}, {menu_w, menu_h}};
       }
 
       auto h = 1.f - 0.05f;
@@ -283,8 +286,8 @@ public:
 
       ps[7] = {};
       ps[8] = ps[10] = ps[11] = ps[13] = {{}, {sel_border, sel_border}};
-      ps[9] = ps[12] = {{}, {sel_border, 0.0625f}};
-      ps[14] = ps[15] = {{}, {0.5f, sel_border}};
+      ps[9] = ps[12] = {{}, {sel_border, menu_h}};
+      ps[14] = ps[15] = {{}, {menu_w, sel_border}};
     });
 
     m_texts.run_once();
