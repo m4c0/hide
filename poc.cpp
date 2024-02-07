@@ -195,7 +195,7 @@ class main_menu : public scene {
   texts m_texts;
 
   sitime::stopwatch m_time{};
-  scene *m_next = this;
+  bool m_selected{};
 
   bool m_has_save{};
   unsigned m_idx{};
@@ -240,7 +240,7 @@ class main_menu : public scene {
   [[nodiscard]] auto time() const noexcept { return m_time.millis() / 1000.0; }
   [[nodiscard]] float alpha() const noexcept {
     float t = time();
-    return t < 1 ? t : 1.0f;
+    return t >= 1 ? 1.0f : (m_selected ? 1.0f - t : t);
   }
 
   using update_thread::run;
@@ -307,7 +307,11 @@ public:
     m_texts.run_once();
   }
 
-  scene *next() override { return m_next; }
+  scene *next() override {
+    return m_selected && time() > 1
+               ? new main_menu{device_and_queue(), !m_has_save}
+               : this;
+  }
   void run(voo::swapchain_and_stuff *sw,
            const voo::cmd_buf_one_time_submit &pcb) override {
     auto pc = quack::adjust_aspect(
@@ -346,8 +350,10 @@ public:
         m_idx = (m_idx + 1) % 5;
       if (k == casein::K_UP)
         m_idx = (m_idx + 4) % 5;
-      if (k == casein::K_ENTER)
-        m_next = new main_menu{device_and_queue(), !m_has_save};
+      if (k == casein::K_ENTER) {
+        m_time = {};
+        m_selected = true;
+      }
     } while (!m_has_save && m_idx == 1);
   }
 };
