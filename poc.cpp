@@ -192,8 +192,9 @@ class main_menu : voo::update_thread, public scene {
   image m_logo;
   image m_sel;
   texts m_texts;
-  sith::memfn_thread<main_menu> m_thread{this, &main_menu::run};
   sitime::stopwatch m_time{};
+
+  sith::memfn_thread<main_menu> m_thread{this, &main_menu::run};
 
   unsigned m_idx{};
 
