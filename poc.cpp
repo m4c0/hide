@@ -194,6 +194,7 @@ class main_menu : public scene {
   texts m_texts;
   sitime::stopwatch m_time{};
 
+  bool m_has_save{};
   unsigned m_idx{};
 
   static constexpr const auto max_dset = 4;
@@ -209,6 +210,10 @@ class main_menu : public scene {
       for (auto i = 2; i < 7; i++) {
         float n = (m_idx == i - 2) ? 0 : 1;
         ms[i] = {n, 0, 0, a};
+      }
+
+      if (!m_has_save) {
+        ms[3] = {1, 1, 1, a};
       }
     });
 
@@ -238,14 +243,15 @@ class main_menu : public scene {
   using update_thread::run;
 
 public:
-  explicit main_menu(voo::device_and_queue *dq)
+  explicit main_menu(voo::device_and_queue *dq, bool has_save = false)
       : scene{dq}
       , m_ps{*dq, max_dset}
       , m_ib{m_ps.create_batch(max_sprites)}
       , m_bg{dq, &m_ps, "m3-bg.png"}
       , m_logo{dq, &m_ps, "m3-game_title.png"}
       , m_sel{dq, &m_ps, "m3-storeCounter_bar.png"}
-      , m_texts{dq, &m_ps} {
+      , m_texts{dq, &m_ps}
+      , m_has_save{has_save} {
     m_ib.map_all([](auto all) {
       for (auto i = 0; i < max_sprites; i++) {
         all.multipliers[i] = {1, 1, 1, 1};
