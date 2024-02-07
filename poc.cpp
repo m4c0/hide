@@ -37,6 +37,7 @@ static wtf::library g_wtf{};
 
 class scene : public voo::update_thread {
 public:
+  using update_thread::run;
   using update_thread::update_thread;
 
   virtual ~scene() = default;
@@ -46,8 +47,6 @@ public:
                    const voo::cmd_buf_one_time_submit &pcb) = 0;
 
   virtual void key_down(casein::keys k) {}
-
-  void run() { update_thread::run(); }
 };
 
 class image {
@@ -111,7 +110,6 @@ class splash : public scene {
   image m_img;
 
   sitime::stopwatch m_time{};
-  sith::memfn_thread<splash> m_thread{this, &splash::run};
 
   [[nodiscard]] auto time() const noexcept { return m_time.millis() / 1000.0; }
   [[nodiscard]] auto alpha() const noexcept {
@@ -158,10 +156,7 @@ public:
       all.colours[0] = {0, 0, 0, 1};
       all.uvs[0] = {{0, 0}, {1, 1}};
     });
-
-    m_thread.start();
   }
-  virtual ~splash() = default;
 
   [[nodiscard]] scene *next() override {
     if (time() > 3)
@@ -197,8 +192,6 @@ class main_menu : public scene {
   image m_sel;
   texts m_texts;
   sitime::stopwatch m_time{};
-
-  sith::memfn_thread<main_menu> m_thread{this, &main_menu::run};
 
   unsigned m_idx{};
 
@@ -294,8 +287,6 @@ public:
     });
 
     m_texts.run_once();
-
-    m_thread.start();
   }
 
   scene *next() override { return this; }
@@ -361,13 +352,21 @@ public:
     m_s = &s;
     release_init_lock();
 
+    sith::memfn_thread<scene> thr{&*s, &scene::run};
+    thr.start();
+
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
 
       extent_loop(dq, sw, [&] {
         sw.queue_one_time_submit(dq, [&](auto pcb) { s->run(&sw, pcb); });
 
-        s.reset(s->next());
+        auto n = s->next();
+        if (n != &*s) {
+          thr = {n, &scene::run};
+          s.reset(n);
+          thr.start();
+        }
       });
     }
   }
