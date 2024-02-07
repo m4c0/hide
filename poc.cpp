@@ -193,6 +193,7 @@ class main_menu : voo::update_thread, public scene {
   image m_sel;
   texts m_texts;
   sith::memfn_thread<main_menu> m_thread{this, &main_menu::run};
+  sitime::stopwatch m_time{};
 
   unsigned m_idx{};
 
@@ -216,6 +217,12 @@ class main_menu : voo::update_thread, public scene {
 
     voo::cmd_buf_one_time_submit pcb{cb};
     m_ib.setup_copy(cb);
+  }
+
+  [[nodiscard]] auto time() const noexcept { return m_time.millis() / 1000.0; }
+  [[nodiscard]] auto alpha() const noexcept {
+    float t = time();
+    return t < 1 ? t : 1.0f;
   }
 
   using update_thread::run;
@@ -311,6 +318,9 @@ public:
   }
 
   void key_down(casein::keys k) override {
+    if (alpha() < 1.0f)
+      return;
+
     if (k == casein::K_DOWN)
       m_idx = (m_idx + 1) % 5;
     if (k == casein::K_UP)
