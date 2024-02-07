@@ -35,8 +35,10 @@ import what_the_font;
 
 static wtf::library g_wtf{};
 
-class scene {
+class scene : public voo::update_thread {
 public:
+  using update_thread::update_thread;
+
   virtual ~scene() = default;
 
   virtual scene *next() = 0;
@@ -44,6 +46,8 @@ public:
                    const voo::cmd_buf_one_time_submit &pcb) = 0;
 
   virtual void key_down(casein::keys k) {}
+
+  void run() { update_thread::run(); }
 };
 
 class image {
@@ -99,7 +103,7 @@ public:
   using update_thread::run_once;
 };
 
-class splash : voo::update_thread, public scene {
+class splash : public scene {
   voo::device_and_queue *m_dq;
 
   quack::pipeline_stuff m_ps;
@@ -142,7 +146,7 @@ protected:
 
 public:
   splash(voo::device_and_queue *dq, jute::view name)
-      : update_thread{dq}
+      : scene{dq}
       , m_dq{dq}
       , m_ps{*dq, 1}
       , m_ib{m_ps.create_batch(1)}
@@ -185,7 +189,7 @@ public:
   }
 };
 
-class main_menu : voo::update_thread, public scene {
+class main_menu : public scene {
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
   image m_bg;
@@ -236,7 +240,7 @@ class main_menu : voo::update_thread, public scene {
 
 public:
   explicit main_menu(voo::device_and_queue *dq)
-      : update_thread{dq}
+      : scene{dq}
       , m_ps{*dq, max_dset}
       , m_ib{m_ps.create_batch(max_sprites)}
       , m_bg{dq, &m_ps, "m3-bg.png"}
