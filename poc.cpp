@@ -338,10 +338,12 @@ public:
     if (alpha() < 1.0f)
       return;
 
-    if (k == casein::K_DOWN)
-      m_idx = (m_idx + 1) % 5;
-    if (k == casein::K_UP)
-      m_idx = (m_idx + 4) % 5;
+    do {
+      if (k == casein::K_DOWN)
+        m_idx = (m_idx + 1) % 5;
+      if (k == casein::K_UP)
+        m_idx = (m_idx + 4) % 5;
+    } while (!m_has_save && m_idx == 1);
   }
 };
 
