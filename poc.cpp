@@ -238,16 +238,14 @@ public:
   }
 };
 
-class options_texts : public texts {
-public:
-};
 class options : public scene {
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
   background m_bg;
+  texts m_txt;
 
-  static constexpr const auto max_dset = 1;
-  static constexpr const auto max_sprites = 1;
+  static constexpr const auto max_dset = 2;
+  static constexpr const auto max_sprites = 1 + 3;
 
   void build_cmd_buf(vee::command_buffer cb) override {
     voo::cmd_buf_one_time_submit pcb{cb};
@@ -259,11 +257,25 @@ public:
       : scene{dq}
       , m_ps{*dq, max_dset}
       , m_ib{m_ps.create_batch(max_sprites)}
-      , m_bg{dq, &m_ps} {
+      , m_bg{dq, &m_ps}
+      , m_txt{dq, &m_ps} {
     m_ib.map_all([this](auto all) {
       reset_quack(all, max_sprites);
       m_bg.set_all(all);
+
+      for (auto i = 0; i < 3; i++) {
+        all.positions[1 + i] = {{0, i * 0.0625f}, {0.25f, 0.0625f}};
+        all.uvs[1 + i] = {{0.0f, i * 0.125f}, {0.45f, (i + 1) * 0.125f}};
+      }
     });
+
+    {
+      auto s = m_txt.shaper();
+      s.draw("Sound", 0);
+      s.draw("Music", 1);
+      s.draw("Fullscreen", 2);
+    }
+    m_txt.run_once();
   }
 
   [[nodiscard]] scene *next() override { return this; }
@@ -285,6 +297,9 @@ public:
     m_ps.cmd_push_vert_frag_constants(*pcb, pc);
 
     m_bg.run(&m_ps, *pcb);
+
+    m_ps.cmd_bind_descriptor_set(*pcb, m_txt.dset());
+    m_ps.run(*pcb, 3, 1);
   }
 };
 
