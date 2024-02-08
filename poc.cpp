@@ -237,12 +237,13 @@ class main_menu : public scene {
     constexpr const auto menu_h = 0.0625f;
 
     float a = alpha();
+    float hs = 0.5f * (1.0f - a);
 
     ps[0] = {{-2.f, -2.f}, {4.f, 4.f}};
 
-    ps[1] = {{0, -0.5f * (1.0f - a)}, m_logo.size(0.5f)};
+    ps[1] = {{0, -hs}, m_logo.size(0.5f)};
     for (auto i = 0; i < 5; i++) {
-      ps[2 + i] = {{0, 0.05f + 0.5f + i * 0.0625f}, {menu_w, menu_h}};
+      ps[2 + i] = {{0, hs + 0.05f + 0.5f + i * 0.0625f}, {menu_w, menu_h}};
     }
 
     auto h = 1.f - 0.05f;
