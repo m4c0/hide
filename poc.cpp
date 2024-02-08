@@ -34,6 +34,7 @@ import what_the_font;
 // * Exit = duh
 
 static wtf::library g_wtf{};
+static wtf::face g_wtf_face_100{g_wtf.new_face("VictorMono-Regular.otf", 100)};
 
 void reset_quack(auto all, unsigned size) {
   for (auto i = 0; i < size; i++) {
@@ -103,7 +104,8 @@ public:
       , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {
     constexpr const auto line_h = 128;
     constexpr const auto font_h = 100;
-    wtf::face f = g_wtf.new_face("VictorMono-Regular.otf", font_h);
+    auto &f = g_wtf_face_100;
+
     voo::mapmem m{m_img.host_memory()};
     auto img = static_cast<unsigned char *>(*m);
     f.shape_en("New Game").draw(img, 1024, 1024, 0, font_h);
