@@ -220,18 +220,7 @@ class main_menu : public scene {
       }
     });
 
-    m_ib.map_positions([this](auto *ps) {
-      auto p = ps[m_idx + 2];
-      ps[7] = p;
-
-      ps[8].x = ps[9].x = ps[10].x = p.x - sel_border;
-      ps[14].x = ps[15].x = p.x;
-      ps[11].x = ps[12].x = ps[13].x = p.x + p.w;
-
-      ps[8].y = ps[11].y = ps[14].y = p.y - sel_border;
-      ps[9].y = ps[12].y = p.y;
-      ps[10].y = ps[13].y = ps[15].y = p.y + p.h;
-    });
+    m_ib.map_positions([this](auto *ps) { setup_positions(ps); });
 
     voo::cmd_buf_one_time_submit pcb{cb};
     m_ib.setup_copy(cb);
@@ -267,6 +256,17 @@ class main_menu : public scene {
     ps[8] = ps[10] = ps[11] = ps[13] = {{}, {sel_border, sel_border}};
     ps[9] = ps[12] = {{}, {sel_border, menu_h}};
     ps[14] = ps[15] = {{}, {menu_w, sel_border}};
+
+    auto p = ps[m_idx + 2];
+    ps[7] = p;
+
+    ps[8].x = ps[9].x = ps[10].x = p.x - sel_border;
+    ps[14].x = ps[15].x = p.x;
+    ps[11].x = ps[12].x = ps[13].x = p.x + p.w;
+
+    ps[8].y = ps[11].y = ps[14].y = p.y - sel_border;
+    ps[9].y = ps[12].y = p.y;
+    ps[10].y = ps[13].y = ps[15].y = p.y + p.h;
   }
 
   using update_thread::run;
