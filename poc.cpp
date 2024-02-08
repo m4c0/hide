@@ -200,10 +200,30 @@ public:
            const voo::cmd_buf_one_time_submit &pcb) override {}
 };
 
+class background {
+  image m_bg;
+
+public:
+  background(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
+      : m_bg{dq, ps, "m3-bg.png"} {}
+
+  void set_all(auto all) {
+    all.colours[0] = {0, 0, 0, 0};
+    all.multipliers[0] = {1, 1, 1, 1};
+    all.positions[0] = {{-2.f, -2.f}, {4.f, 4.f}};
+    all.uvs[0] = {{0, 0}, {1, 1}};
+  }
+
+  void run(quack::pipeline_stuff *ps, vee::command_buffer cb) {
+    ps->cmd_bind_descriptor_set(cb, m_bg.dset());
+    ps->run(cb, 1, 0);
+  }
+};
+
 class options : public scene {
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
-  image m_bg;
+  background m_bg;
 
   static constexpr const auto max_dset = 1;
   static constexpr const auto max_sprites = 1;
@@ -218,15 +238,14 @@ public:
       : scene{dq}
       , m_ps{*dq, max_dset}
       , m_ib{m_ps.create_batch(max_sprites)}
-      , m_bg{dq, &m_ps, "m3-bg.png"} {
-    m_ib.map_all([](auto all) {
-      for (auto i = 0; i < max_sprites; i++) {
+      , m_bg{dq, &m_ps} {
+    m_ib.map_all([this](auto all) {
+      m_bg.set_all(all);
+
+      for (auto i = 1; i < max_sprites; i++) {
         all.multipliers[i] = {1, 1, 1, 1};
         all.colours[i] = {0, 0, 0, 0};
       }
-
-      all.uvs[0] = {{0, 0}, {1, 1}};
-      all.positions[0] = {{-2.f, -2.f}, {4.f, 4.f}};
     });
   }
 
@@ -248,8 +267,7 @@ public:
     m_ib.build_commands(*pcb);
     m_ps.cmd_push_vert_frag_constants(*pcb, pc);
 
-    m_ps.cmd_bind_descriptor_set(*pcb, m_bg.dset());
-    m_ps.run(*pcb, 1, 0);
+    m_bg.run(&m_ps, *pcb);
   }
 };
 
@@ -266,7 +284,7 @@ class main_menu : public scene {
 
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
-  image m_bg;
+  background m_bg;
   image m_logo;
   image m_sel;
   texts m_texts;
@@ -285,6 +303,7 @@ class main_menu : public scene {
     auto a = alpha();
     m_ib.map_multipliers([this, a](auto *ms) {
       // TODO: show bg faster
+      // TODO: "set alpha" in BG
       for (auto i = 0; i < max_sprites; i++)
         ms[i] = {1, 1, 1, a};
 
@@ -296,6 +315,7 @@ class main_menu : public scene {
       if (!m_has_save) {
         ms[3] = {0.6, 0.5, 0.5, a};
       }
+      // TODO: set alpha in BG
       if (m_idx == o_options) {
         ms[0] = {1, 1, 1, 1};
       }
@@ -323,8 +343,6 @@ class main_menu : public scene {
     // TODO: adjust for vertical screens
     float hs = 0.5f * (1.0f - a);
 
-    ps[0] = {{-2.f, -2.f}, {4.f, 4.f}};
-
     ps[1] = {{0, -hs}, m_logo.size(0.5f)};
     for (auto i = 0; i < 5; i++) {
       ps[2 + i] = {{0, hs + 0.05f + 0.5f + i * 0.0625f}, {menu_w, menu_h}};
@@ -339,6 +357,7 @@ class main_menu : public scene {
       ps[i].y += h / 2.0f;
     }
 
+    // TODO: merge this block with next
     ps[7] = {};
     ps[8] = ps[10] = ps[11] = ps[13] = {{}, {sel_border, sel_border}};
     ps[9] = ps[12] = {{}, {sel_border, menu_h}};
@@ -363,18 +382,19 @@ public:
       : scene{dq}
       , m_ps{*dq, max_dset}
       , m_ib{m_ps.create_batch(max_sprites)}
-      , m_bg{dq, &m_ps, "m3-bg.png"}
+      , m_bg{dq, &m_ps}
       , m_logo{dq, &m_ps, "m3-game_title.png"}
       , m_sel{dq, &m_ps, "m3-storeCounter_bar.png"}
       , m_texts{dq, &m_ps}
       , m_has_save{has_save} {
-    m_ib.map_all([](auto all) {
-      for (auto i = 0; i < max_sprites; i++) {
+    m_ib.map_all([this](auto all) {
+      m_bg.set_all(all);
+
+      for (auto i = 1; i < max_sprites; i++) {
         all.multipliers[i] = {1, 1, 1, 1};
         all.colours[i] = {0, 0, 0, 0};
       }
 
-      all.uvs[0] = {{0, 0}, {1, 1}};
       all.uvs[1] = {{0, 0}, {1, 1}};
       for (auto i = 0; i < 5; i++) {
         all.uvs[2 + i] = {{0.0f, i * 0.125f}, {0.45f, (i + 1) * 0.125f}};
@@ -426,8 +446,7 @@ public:
     m_ib.build_commands(*pcb);
     m_ps.cmd_push_vert_frag_constants(*pcb, pc);
 
-    m_ps.cmd_bind_descriptor_set(*pcb, m_bg.dset());
-    m_ps.run(*pcb, 1, 0);
+    m_bg.run(&m_ps, *pcb);
 
     m_ps.cmd_bind_descriptor_set(*pcb, m_logo.dset());
     m_ps.run(*pcb, 1, 1);
