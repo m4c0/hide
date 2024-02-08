@@ -264,9 +264,12 @@ public:
       m_bg.set_all(all);
 
       for (auto i = 0; i < 3; i++) {
-        all.positions[1 + i] = {{0, i * 0.0625f}, {0.25f, 0.0625f}};
-        all.uvs[1 + i] = {{0.0f, i * 0.125f}, {0.45f, (i + 1) * 0.125f}};
+        constexpr const auto w = 0.3f;
+        constexpr const auto r = w * 0.45f / 0.25f;
+        all.positions[1 + i] = {{-0.3f, i * 0.0625f}, {w, 0.0625f}};
+        all.uvs[1 + i] = {{0.0f, i * 0.125f}, {r, (i + 1) * 0.125f}};
       }
+      all.positions[1 + 2].y += 0.02f;
     });
 
     {
