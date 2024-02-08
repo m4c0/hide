@@ -89,9 +89,13 @@ public:
 };
 
 class texts_shaper {
+  static constexpr const auto line_h = 128;
+  static constexpr const auto font_h = 100;
+
   voo::mapmem m_mem;
   unsigned m_w;
   unsigned m_h;
+  int m_pen_y = font_h;
 
 public:
   texts_shaper(voo::h2l_image *img)
@@ -99,13 +103,14 @@ public:
       , m_w{img->width()}
       , m_h{img->height()} {}
 
-  void draw(jute::view str, int line) {
-    constexpr const auto line_h = 128;
-    constexpr const auto font_h = 100;
+  void draw(jute::view str) {
     auto &f = g_wtf_face_100;
 
     auto img = static_cast<unsigned char *>(*m_mem);
-    f.shape_en(str).draw(img, m_w, m_h, 0, font_h + line_h * line);
+    int pen_x = 0;
+    f.shape_en(str).draw(img, m_w, m_h, &pen_x, &m_pen_y);
+
+    m_pen_y += line_h;
   }
 };
 class texts : public voo::update_thread {
@@ -265,6 +270,11 @@ public:
       reset_quack(all, max_sprites);
       m_bg.set_all(all);
 
+      auto s = m_txt.shaper();
+      s.draw("Sound");
+      s.draw("Music");
+      s.draw("Fullscreen");
+
       for (auto i = 0; i < 3; i++) {
         constexpr const auto w = 0.3f;
         constexpr const auto r = w * 0.45f / 0.25f;
@@ -274,12 +284,6 @@ public:
       all.positions[1 + o_fullscreen].y += 0.02f;
     });
 
-    {
-      auto s = m_txt.shaper();
-      s.draw("Sound", o_sound);
-      s.draw("Music", o_music);
-      s.draw("Fullscreen", o_fullscreen);
-    }
     m_txt.run_once();
   }
 
@@ -448,11 +452,11 @@ public:
 
     {
       auto s = m_texts.shaper();
-      s.draw("New Game", 0);
-      s.draw("Continue", 1);
-      s.draw("Options", 2);
-      s.draw("Credits", 3);
-      s.draw("Exit", 4);
+      s.draw("New Game");
+      s.draw("Continue");
+      s.draw("Options");
+      s.draw("Credits");
+      s.draw("Exit");
     }
     m_texts.run_once();
   }
