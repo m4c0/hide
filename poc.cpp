@@ -186,6 +186,18 @@ public:
   }
 };
 
+class options : public scene {
+  void build_cmd_buf(vee::command_buffer cb) override {}
+
+public:
+  using scene::scene;
+
+  [[nodiscard]] scene *next() override { return this; }
+
+  void run(voo::swapchain_and_stuff *sw,
+           const voo::cmd_buf_one_time_submit &pcb) override {}
+};
+
 class main_menu : public scene {
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
@@ -317,9 +329,15 @@ public:
   }
 
   scene *next() override {
-    return m_selected && time() > 1
-               ? new main_menu{device_and_queue(), !m_has_save}
-               : this;
+    if (!m_selected || time() < 1)
+      return this;
+
+    switch (m_idx) {
+    case 2:
+      return new options{device_and_queue()};
+    default:
+      return new main_menu{device_and_queue(), !m_has_save};
+    }
   }
   void run(voo::swapchain_and_stuff *sw,
            const voo::cmd_buf_one_time_submit &pcb) override {
