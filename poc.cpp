@@ -96,6 +96,7 @@ class texts_shaper {
   unsigned m_w;
   unsigned m_h;
   int m_pen_y = font_h;
+  float m_v0 = 0;
 
 public:
   texts_shaper(voo::h2l_image *img)
@@ -103,14 +104,19 @@ public:
       , m_w{img->width()}
       , m_h{img->height()} {}
 
-  void draw(jute::view str) {
+  void draw(jute::view str, quack::uv *uv) {
     auto &f = g_wtf_face_100;
 
     auto img = static_cast<unsigned char *>(*m_mem);
     int pen_x = 0;
     f.shape_en(str).draw(img, m_w, m_h, &pen_x, &m_pen_y);
 
+    float u1 = static_cast<float>(pen_x) / 1024.0f;
+    float v1 = m_v0 + 0.125f;
+    *uv = {{0, m_v0}, {u1, v1}};
+
     m_pen_y += line_h;
+    m_v0 = v1;
   }
 };
 class texts : public voo::update_thread {
@@ -271,15 +277,13 @@ public:
       m_bg.set_all(all);
 
       auto s = m_txt.shaper();
-      s.draw("Sound");
-      s.draw("Music");
-      s.draw("Fullscreen");
+      s.draw("Sound", &all.uvs[1]);
+      s.draw("Music", &all.uvs[2]);
+      s.draw("Fullscreen", &all.uvs[3]);
 
       for (auto i = 0; i < 3; i++) {
         constexpr const auto w = 0.3f;
-        constexpr const auto r = w * 0.45f / 0.25f;
         all.positions[1 + i] = {{-0.3f, i * 0.0625f}, {w, 0.0625f}};
-        all.uvs[1 + i] = {{0.0f, i * 0.125f}, {r, (i + 1) * 0.125f}};
       }
       all.positions[1 + o_fullscreen].y += 0.02f;
     });
@@ -433,9 +437,13 @@ public:
       m_bg.set_all(all);
 
       all.uvs[1] = {{0, 0}, {1, 1}};
-      for (auto i = 0; i < 5; i++) {
-        all.uvs[2 + i] = {{0.0f, i * 0.125f}, {0.45f, (i + 1) * 0.125f}};
-      }
+
+      auto s = m_texts.shaper();
+      s.draw("New Game", &all.uvs[2]);
+      s.draw("Continue", &all.uvs[3]);
+      s.draw("Options", &all.uvs[4]);
+      s.draw("Credits", &all.uvs[5]);
+      s.draw("Exit", &all.uvs[6]);
 
       all.uvs[7] = {{0.25f, 0.25f}, {0.75f, 0.75f}};
       all.uvs[8] = {{0.00f, 0.00f}, {0.25f, 0.25f}};
@@ -450,14 +458,6 @@ public:
 
     m_ib.map_positions([this](auto *ps) { setup_positions(ps); });
 
-    {
-      auto s = m_texts.shaper();
-      s.draw("New Game");
-      s.draw("Continue");
-      s.draw("Options");
-      s.draw("Credits");
-      s.draw("Exit");
-    }
     m_texts.run_once();
   }
 
