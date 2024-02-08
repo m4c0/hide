@@ -87,6 +87,27 @@ public:
     return quack::size{h * aspect(), h};
   }
 };
+
+class texts_shaper {
+  voo::mapmem m_mem;
+  unsigned m_w;
+  unsigned m_h;
+
+public:
+  texts_shaper(voo::h2l_image *img)
+      : m_mem{img->host_memory()}
+      , m_w{img->width()}
+      , m_h{img->height()} {}
+
+  void draw(jute::view str, int line) {
+    constexpr const auto line_h = 128;
+    constexpr const auto font_h = 100;
+    auto &f = g_wtf_face_100;
+
+    auto img = static_cast<unsigned char *>(*m_mem);
+    f.shape_en(str).draw(img, m_w, m_h, 0, font_h + line_h * line);
+  }
+};
 class texts : public voo::update_thread {
   vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
   voo::h2l_image m_img;
@@ -98,9 +119,7 @@ class texts : public voo::update_thread {
   }
 
 protected:
-  [[nodiscard]] constexpr auto host_memory() const noexcept {
-    return m_img.host_memory();
-  }
+  [[nodiscard]] auto shaper() noexcept { return texts_shaper{&m_img}; }
 
 public:
   texts(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
@@ -221,6 +240,9 @@ public:
   }
 };
 
+class options_texts : public texts {
+public:
+};
 class options : public scene {
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
@@ -272,17 +294,12 @@ class main_menu_texts : public texts {
 public:
   main_menu_texts(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
       : texts{dq, ps} {
-    constexpr const auto line_h = 128;
-    constexpr const auto font_h = 100;
-    auto &f = g_wtf_face_100;
-
-    voo::mapmem m{host_memory()};
-    auto img = static_cast<unsigned char *>(*m);
-    f.shape_en("New Game").draw(img, 1024, 1024, 0, font_h);
-    f.shape_en("Continue").draw(img, 1024, 1024, 0, font_h + line_h);
-    f.shape_en("Options").draw(img, 1024, 1024, 0, font_h + line_h * 2);
-    f.shape_en("Credits").draw(img, 1024, 1024, 0, font_h + line_h * 3);
-    f.shape_en("Exit").draw(img, 1024, 1024, 0, font_h + line_h * 4);
+    auto s = shaper();
+    s.draw("New Game", 0);
+    s.draw("Continue", 1);
+    s.draw("Options", 2);
+    s.draw("Credits", 3);
+    s.draw("Exit", 4);
   }
 };
 
