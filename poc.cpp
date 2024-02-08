@@ -97,22 +97,16 @@ class texts : public voo::update_thread {
     m_img.setup_copy(cb);
   }
 
+protected:
+  [[nodiscard]] constexpr auto host_memory() const noexcept {
+    return m_img.host_memory();
+  }
+
 public:
   texts(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
       : update_thread{dq}
       , m_img{*dq, 1024, 1024, false}
       , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {
-    constexpr const auto line_h = 128;
-    constexpr const auto font_h = 100;
-    auto &f = g_wtf_face_100;
-
-    voo::mapmem m{m_img.host_memory()};
-    auto img = static_cast<unsigned char *>(*m);
-    f.shape_en("New Game").draw(img, 1024, 1024, 0, font_h);
-    f.shape_en("Continue").draw(img, 1024, 1024, 0, font_h + line_h);
-    f.shape_en("Options").draw(img, 1024, 1024, 0, font_h + line_h * 2);
-    f.shape_en("Credits").draw(img, 1024, 1024, 0, font_h + line_h * 3);
-    f.shape_en("Exit").draw(img, 1024, 1024, 0, font_h + line_h * 4);
   }
 
   [[nodiscard]] constexpr auto dset() const noexcept { return m_dset; }
@@ -274,6 +268,24 @@ public:
   }
 };
 
+class main_menu_texts : public texts {
+public:
+  main_menu_texts(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
+      : texts{dq, ps} {
+    constexpr const auto line_h = 128;
+    constexpr const auto font_h = 100;
+    auto &f = g_wtf_face_100;
+
+    voo::mapmem m{host_memory()};
+    auto img = static_cast<unsigned char *>(*m);
+    f.shape_en("New Game").draw(img, 1024, 1024, 0, font_h);
+    f.shape_en("Continue").draw(img, 1024, 1024, 0, font_h + line_h);
+    f.shape_en("Options").draw(img, 1024, 1024, 0, font_h + line_h * 2);
+    f.shape_en("Credits").draw(img, 1024, 1024, 0, font_h + line_h * 3);
+    f.shape_en("Exit").draw(img, 1024, 1024, 0, font_h + line_h * 4);
+  }
+};
+
 // TODO: fix weird submitting empty CB
 // TODO: fix random "flash of unstyled content"
 class main_menu : public scene {
@@ -290,7 +302,7 @@ class main_menu : public scene {
   background m_bg;
   image m_logo;
   image m_sel;
-  texts m_texts;
+  main_menu_texts m_texts;
 
   sitime::stopwatch m_time{};
   bool m_selected{};
