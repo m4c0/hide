@@ -97,14 +97,16 @@ class texts_shaper {
   unsigned m_h;
   int m_pen_y = font_h;
   float m_v0 = 0;
+  quack::uv *m_uvs;
 
 public:
-  texts_shaper(voo::h2l_image *img)
+  texts_shaper(voo::h2l_image *img, quack::uv *uvs)
       : m_mem{img->host_memory()}
       , m_w{img->width()}
-      , m_h{img->height()} {}
+      , m_h{img->height()}
+      , m_uvs{uvs} {}
 
-  void draw(jute::view str, quack::uv *uv) {
+  void draw(jute::view str) {
     auto &f = g_wtf_face_100;
 
     auto img = static_cast<unsigned char *>(*m_mem);
@@ -113,7 +115,7 @@ public:
 
     float u1 = static_cast<float>(pen_x) / 1024.0f;
     float v1 = m_v0 + 0.125f;
-    *uv = {{0, m_v0}, {u1, v1}};
+    *m_uvs++ = {{0, m_v0}, {u1, v1}};
 
     m_pen_y += line_h;
     m_v0 = v1;
@@ -136,7 +138,9 @@ public:
       , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {
   }
 
-  [[nodiscard]] auto shaper() noexcept { return texts_shaper{&m_img}; }
+  [[nodiscard]] auto shaper(quack::uv *uvs) noexcept {
+    return texts_shaper{&m_img, uvs};
+  }
   [[nodiscard]] constexpr auto dset() const noexcept { return m_dset; }
 
   using update_thread::run_once;
@@ -276,10 +280,10 @@ public:
       reset_quack(all, max_sprites);
       m_bg.set_all(all);
 
-      auto s = m_txt.shaper();
-      s.draw("Sound", &all.uvs[1]);
-      s.draw("Music", &all.uvs[2]);
-      s.draw("Fullscreen", &all.uvs[3]);
+      auto s = m_txt.shaper(all.uvs + 1);
+      s.draw("Sound");
+      s.draw("Music");
+      s.draw("Fullscreen");
 
       for (auto i = 0; i < 3; i++) {
         constexpr const auto w = 0.3f;
@@ -439,12 +443,12 @@ public:
 
       all.uvs[1] = {{0, 0}, {1, 1}};
 
-      auto s = m_texts.shaper();
-      s.draw("New Game", &all.uvs[2]);
-      s.draw("Continue", &all.uvs[3]);
-      s.draw("Options", &all.uvs[4]);
-      s.draw("Credits", &all.uvs[5]);
-      s.draw("Exit", &all.uvs[6]);
+      auto s = m_texts.shaper(all.uvs + 2);
+      s.draw("New Game");
+      s.draw("Continue");
+      s.draw("Options");
+      s.draw("Credits");
+      s.draw("Exit");
 
       all.uvs[7] = {{0.25f, 0.25f}, {0.75f, 0.75f}};
       all.uvs[8] = {{0.00f, 0.00f}, {0.25f, 0.25f}};
