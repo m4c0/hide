@@ -207,6 +207,7 @@ class main_menu : public scene {
   void build_cmd_buf(vee::command_buffer cb) override {
     auto a = alpha();
     m_ib.map_multipliers([this, a](auto *ms) {
+      // TODO: show bg faster
       for (auto i = 0; i < max_sprites; i++)
         ms[i] = {1, 1, 1, a};
 
@@ -237,6 +238,9 @@ class main_menu : public scene {
     constexpr const auto menu_h = 0.0625f;
 
     float a = alpha();
+    // TODO: easy in/out
+    // TODO: other kind of animations
+    // TODO: adjust for vertical screens
     float hs = 0.5f * (1.0f - a);
 
     ps[0] = {{-2.f, -2.f}, {4.f, 4.f}};
