@@ -243,6 +243,32 @@ class main_menu : public scene {
     return t >= 1 ? 1.0f : (m_selected ? 1.0f - t : t);
   }
 
+  void setup_positions(quack::rect *ps) const {
+    constexpr const auto menu_w = 0.25f;
+    constexpr const auto menu_h = 0.0625f;
+
+    ps[0] = {{-2.f, -2.f}, {4.f, 4.f}};
+
+    ps[1] = {{0, 0}, m_logo.size(0.5f)};
+    for (auto i = 0; i < 5; i++) {
+      ps[2 + i] = {{0, 0.05f + 0.5f + i * 0.0625f}, {menu_w, menu_h}};
+    }
+
+    auto h = 1.f - 0.05f;
+    for (auto i = 1; i < 7; i++) {
+      ps[i].x = -ps[i].w / 2.0f;
+      h -= ps[i].h;
+    }
+    for (auto i = 1; i < 7; i++) {
+      ps[i].y += h / 2.0f;
+    }
+
+    ps[7] = {};
+    ps[8] = ps[10] = ps[11] = ps[13] = {{}, {sel_border, sel_border}};
+    ps[9] = ps[12] = {{}, {sel_border, menu_h}};
+    ps[14] = ps[15] = {{}, {menu_w, sel_border}};
+  }
+
   using update_thread::run;
 
 public:
@@ -278,31 +304,7 @@ public:
       all.uvs[15] = {{0.25f, 0.75f}, {0.75f, 1.00f}};
     });
 
-    m_ib.map_positions([this](auto *ps) {
-      constexpr const auto menu_w = 0.25f;
-      constexpr const auto menu_h = 0.0625f;
-
-      ps[0] = {{-2.f, -2.f}, {4.f, 4.f}};
-
-      ps[1] = {{0, 0}, m_logo.size(0.5f)};
-      for (auto i = 0; i < 5; i++) {
-        ps[2 + i] = {{0, 0.05f + 0.5f + i * 0.0625f}, {menu_w, menu_h}};
-      }
-
-      auto h = 1.f - 0.05f;
-      for (auto i = 1; i < 7; i++) {
-        ps[i].x = -ps[i].w / 2.0f;
-        h -= ps[i].h;
-      }
-      for (auto i = 1; i < 7; i++) {
-        ps[i].y += h / 2.0f;
-      }
-
-      ps[7] = {};
-      ps[8] = ps[10] = ps[11] = ps[13] = {{}, {sel_border, sel_border}};
-      ps[9] = ps[12] = {{}, {sel_border, menu_h}};
-      ps[14] = ps[15] = {{}, {menu_w, sel_border}};
-    });
+    m_ib.map_positions([this](auto *ps) { setup_positions(ps); });
 
     m_texts.run_once();
   }
