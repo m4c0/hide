@@ -99,11 +99,11 @@ public:
     wtf::face f = g_wtf.new_face("VictorMono-Regular.otf", font_h);
     voo::mapmem m{m_img.host_memory()};
     auto img = static_cast<unsigned char *>(*m);
-    f.shape_pt("New Game").draw(img, 1024, 1024, 0, font_h);
-    f.shape_pt("Continue").draw(img, 1024, 1024, 0, font_h + line_h);
-    f.shape_pt("Options").draw(img, 1024, 1024, 0, font_h + line_h * 2);
-    f.shape_pt("Credits").draw(img, 1024, 1024, 0, font_h + line_h * 3);
-    f.shape_pt("Exit").draw(img, 1024, 1024, 0, font_h + line_h * 4);
+    f.shape_en("New Game").draw(img, 1024, 1024, 0, font_h);
+    f.shape_en("Continue").draw(img, 1024, 1024, 0, font_h + line_h);
+    f.shape_en("Options").draw(img, 1024, 1024, 0, font_h + line_h * 2);
+    f.shape_en("Credits").draw(img, 1024, 1024, 0, font_h + line_h * 3);
+    f.shape_en("Exit").draw(img, 1024, 1024, 0, font_h + line_h * 4);
   }
 
   [[nodiscard]] constexpr auto dset() const noexcept { return m_dset; }
