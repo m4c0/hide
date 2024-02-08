@@ -118,9 +118,6 @@ class texts : public voo::update_thread {
     m_img.setup_copy(cb);
   }
 
-protected:
-  [[nodiscard]] auto shaper() noexcept { return texts_shaper{&m_img}; }
-
 public:
   texts(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
       : update_thread{dq}
@@ -128,6 +125,7 @@ public:
       , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {
   }
 
+  [[nodiscard]] auto shaper() noexcept { return texts_shaper{&m_img}; }
   [[nodiscard]] constexpr auto dset() const noexcept { return m_dset; }
 
   using update_thread::run_once;
@@ -290,19 +288,6 @@ public:
   }
 };
 
-class main_menu_texts : public texts {
-public:
-  main_menu_texts(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
-      : texts{dq, ps} {
-    auto s = shaper();
-    s.draw("New Game", 0);
-    s.draw("Continue", 1);
-    s.draw("Options", 2);
-    s.draw("Credits", 3);
-    s.draw("Exit", 4);
-  }
-};
-
 // TODO: fix weird submitting empty CB
 // TODO: fix random "flash of unstyled content"
 class main_menu : public scene {
@@ -319,7 +304,7 @@ class main_menu : public scene {
   background m_bg;
   image m_logo;
   image m_sel;
-  main_menu_texts m_texts;
+  texts m_texts;
 
   sitime::stopwatch m_time{};
   bool m_selected{};
@@ -441,6 +426,14 @@ public:
 
     m_ib.map_positions([this](auto *ps) { setup_positions(ps); });
 
+    {
+      auto s = m_texts.shaper();
+      s.draw("New Game", 0);
+      s.draw("Continue", 1);
+      s.draw("Options", 2);
+      s.draw("Credits", 3);
+      s.draw("Exit", 4);
+    }
     m_texts.run_once();
   }
 
