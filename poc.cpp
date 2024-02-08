@@ -250,7 +250,7 @@ public:
 };
 
 class options : public scene {
-  enum items { o_sound, o_music, o_fullscreen };
+  enum items { o_sound, o_music, o_fullscreen, o_count };
 
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
@@ -312,7 +312,7 @@ public:
     m_bg.run(&m_ps, *pcb);
 
     m_ps.cmd_bind_descriptor_set(*pcb, m_txt.dset());
-    m_ps.run(*pcb, 3, 1);
+    m_ps.run(*pcb, o_count, 1);
   }
 };
 
@@ -325,6 +325,7 @@ class main_menu : public scene {
     o_options,
     o_credits,
     o_exit,
+    o_count
   };
 
   quack::pipeline_stuff m_ps;
@@ -500,7 +501,7 @@ public:
     m_ps.run(*pcb, 9, 7);
 
     m_ps.cmd_bind_descriptor_set(*pcb, m_texts.dset());
-    m_ps.run(*pcb, 5, 2);
+    m_ps.run(*pcb, o_count, 2);
   }
 
   void key_down(casein::keys k) override {
