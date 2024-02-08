@@ -213,6 +213,14 @@ public:
 };
 
 class main_menu : public scene {
+  enum menu_options {
+    o_new_game,
+    o_continue,
+    o_options,
+    o_credits,
+    o_exit,
+  };
+
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
   image m_bg;
@@ -224,7 +232,7 @@ class main_menu : public scene {
   bool m_selected{};
 
   bool m_has_save{};
-  unsigned m_idx{};
+  menu_options m_idx{};
 
   static constexpr const auto max_dset = 4;
   static constexpr const auto max_sprites = 2 + 5 + 9;
@@ -244,6 +252,9 @@ class main_menu : public scene {
 
       if (!m_has_save) {
         ms[3] = {0.6, 0.5, 0.5, a};
+      }
+      if (m_idx == o_options) {
+        ms[0] = {1, 1, 1, 1};
       }
     });
 
@@ -347,9 +358,10 @@ public:
       return this;
 
     switch (m_idx) {
-    case 0:
+    case o_new_game:
+    case o_continue:
       return new game{device_and_queue()};
-    case 2:
+    case o_options:
       return new options{device_and_queue()};
     default:
       return new main_menu{device_and_queue(), !m_has_save};
@@ -390,14 +402,14 @@ public:
 
     do {
       if (k == casein::K_DOWN)
-        m_idx = (m_idx + 1) % 5;
+        m_idx = static_cast<menu_options>((m_idx + 1) % 5);
       if (k == casein::K_UP)
-        m_idx = (m_idx + 4) % 5;
+        m_idx = static_cast<menu_options>((m_idx + 4) % 5);
       if (k == casein::K_ENTER) {
         m_time = {};
         m_selected = true;
       }
-    } while (!m_has_save && m_idx == 1);
+    } while (!m_has_save && m_idx == o_continue);
   }
 };
 scene *game::next() {
