@@ -35,6 +35,13 @@ import what_the_font;
 
 static wtf::library g_wtf{};
 
+void reset_quack(auto all, unsigned size) {
+  for (auto i = 0; i < size; i++) {
+    all.multipliers[i] = {1, 1, 1, 1};
+    all.colours[i] = {0, 0, 0, 0};
+  }
+}
+
 class scene : public voo::update_thread {
   voo::device_and_queue *m_dq;
 
@@ -152,10 +159,10 @@ public:
       , m_ib{m_ps.create_batch(1)}
       , m_img{dq, &m_ps, name} {
     m_ib.map_all([this](auto all) {
+      reset_quack(all, 1);
+
       auto img_aspect = m_img.aspect();
       all.positions[0] = {{-img_aspect / 2.f, 0}, {img_aspect, 1}};
-      all.multipliers[0] = {1, 1, 1, 1};
-      all.colours[0] = {0, 0, 0, 1};
       all.uvs[0] = {{0, 0}, {1, 1}};
     });
   }
@@ -208,8 +215,6 @@ public:
       : m_bg{dq, ps, "m3-bg.png"} {}
 
   void set_all(auto all) {
-    all.colours[0] = {0, 0, 0, 0};
-    all.multipliers[0] = {1, 1, 1, 1};
     all.positions[0] = {{-2.f, -2.f}, {4.f, 4.f}};
     all.uvs[0] = {{0, 0}, {1, 1}};
   }
@@ -240,12 +245,8 @@ public:
       , m_ib{m_ps.create_batch(max_sprites)}
       , m_bg{dq, &m_ps} {
     m_ib.map_all([this](auto all) {
+      reset_quack(all, max_sprites);
       m_bg.set_all(all);
-
-      for (auto i = 1; i < max_sprites; i++) {
-        all.multipliers[i] = {1, 1, 1, 1};
-        all.colours[i] = {0, 0, 0, 0};
-      }
     });
   }
 
@@ -388,12 +389,8 @@ public:
       , m_texts{dq, &m_ps}
       , m_has_save{has_save} {
     m_ib.map_all([this](auto all) {
+      reset_quack(all, max_sprites);
       m_bg.set_all(all);
-
-      for (auto i = 1; i < max_sprites; i++) {
-        all.multipliers[i] = {1, 1, 1, 1};
-        all.colours[i] = {0, 0, 0, 0};
-      }
 
       all.uvs[1] = {{0, 0}, {1, 1}};
       for (auto i = 0; i < 5; i++) {
