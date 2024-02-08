@@ -239,6 +239,8 @@ public:
 };
 
 class options : public scene {
+  enum items { o_sound, o_music, o_fullscreen };
+
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
   background m_bg;
@@ -269,14 +271,14 @@ public:
         all.positions[1 + i] = {{-0.3f, i * 0.0625f}, {w, 0.0625f}};
         all.uvs[1 + i] = {{0.0f, i * 0.125f}, {r, (i + 1) * 0.125f}};
       }
-      all.positions[1 + 2].y += 0.02f;
+      all.positions[1 + o_fullscreen].y += 0.02f;
     });
 
     {
       auto s = m_txt.shaper();
-      s.draw("Sound", 0);
-      s.draw("Music", 1);
-      s.draw("Fullscreen", 2);
+      s.draw("Sound", o_sound);
+      s.draw("Music", o_music);
+      s.draw("Fullscreen", o_fullscreen);
     }
     m_txt.run_once();
   }
