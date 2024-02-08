@@ -186,6 +186,20 @@ public:
   }
 };
 
+class game : public scene {
+  sitime::stopwatch m_time{};
+
+  void build_cmd_buf(vee::command_buffer cb) override {}
+
+public:
+  using scene::scene;
+
+  [[nodiscard]] scene *next() override;
+
+  void run(voo::swapchain_and_stuff *sw,
+           const voo::cmd_buf_one_time_submit &pcb) override {}
+};
+
 class options : public scene {
   void build_cmd_buf(vee::command_buffer cb) override {}
 
@@ -333,6 +347,8 @@ public:
       return this;
 
     switch (m_idx) {
+    case 0:
+      return new game{device_and_queue()};
     case 2:
       return new options{device_and_queue()};
     default:
@@ -384,6 +400,11 @@ public:
     } while (!m_has_save && m_idx == 1);
   }
 };
+scene *game::next() {
+  if (m_time.millis() > 2000)
+    return new main_menu{device_and_queue()};
+  return this;
+}
 
 struct splash_2 : splash {
   splash_2(voo::device_and_queue *dq) : splash{dq, "Lenna_(test_image).png"} {}
