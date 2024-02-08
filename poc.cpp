@@ -201,15 +201,56 @@ public:
 };
 
 class options : public scene {
-  void build_cmd_buf(vee::command_buffer cb) override {}
+  quack::pipeline_stuff m_ps;
+  quack::instance_batch m_ib;
+  image m_bg;
+
+  static constexpr const auto max_dset = 1;
+  static constexpr const auto max_sprites = 1;
+
+  void build_cmd_buf(vee::command_buffer cb) override {
+    voo::cmd_buf_one_time_submit pcb{cb};
+    m_ib.setup_copy(cb);
+  }
 
 public:
-  using scene::scene;
+  options(voo::device_and_queue *dq)
+      : scene{dq}
+      , m_ps{*dq, max_dset}
+      , m_ib{m_ps.create_batch(max_sprites)}
+      , m_bg{dq, &m_ps, "m3-bg.png"} {
+    m_ib.map_all([](auto all) {
+      for (auto i = 0; i < max_sprites; i++) {
+        all.multipliers[i] = {1, 1, 1, 1};
+        all.colours[i] = {0, 0, 0, 0};
+      }
+
+      all.uvs[0] = {{0, 0}, {1, 1}};
+      all.positions[0] = {{-2.f, -2.f}, {4.f, 4.f}};
+    });
+  }
 
   [[nodiscard]] scene *next() override { return this; }
 
   void run(voo::swapchain_and_stuff *sw,
-           const voo::cmd_buf_one_time_submit &pcb) override {}
+           const voo::cmd_buf_one_time_submit &pcb) override {
+    auto pc = quack::adjust_aspect(
+        {
+            .grid_pos = {0.0f, 0.5f},
+            .grid_size = {1.0f, 1.0f},
+        },
+        sw->aspect());
+
+    auto rp = sw->cmd_render_pass({
+        .command_buffer = *pcb,
+        .clear_color = {{0, 0, 0, 1}},
+    });
+    m_ib.build_commands(*pcb);
+    m_ps.cmd_push_vert_frag_constants(*pcb, pc);
+
+    m_ps.cmd_bind_descriptor_set(*pcb, m_bg.dset());
+    m_ps.run(*pcb, 1, 0);
+  }
 };
 
 class main_menu : public scene {
