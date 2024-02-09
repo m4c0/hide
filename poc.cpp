@@ -232,7 +232,12 @@ public:
   [[nodiscard]] scene *next() override;
 
   void run(voo::swapchain_and_stuff *sw,
-           const voo::cmd_buf_one_time_submit &pcb) override {}
+           const voo::cmd_buf_one_time_submit &pcb) override {
+    auto rp = sw->cmd_render_pass({
+        .command_buffer = *pcb,
+        .clear_color = {{0, 0, 0, 1}},
+    });
+  }
 };
 
 class background {
