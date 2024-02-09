@@ -42,6 +42,12 @@ void reset_quack(auto all, unsigned size) {
     all.colours[i] = {0, 0, 0, 0};
   }
 }
+auto cmd_render_pass(voo::swapchain_and_stuff *sw, vee::command_buffer cb) {
+  return sw->cmd_render_pass({
+      .command_buffer = cb,
+      .clear_color = {{0, 0, 0, 1}},
+  });
+}
 
 class scene : public voo::update_thread {
   voo::device_and_queue *m_dq;
@@ -210,10 +216,7 @@ public:
         },
         sw->aspect());
 
-    auto rp = sw->cmd_render_pass({
-        .command_buffer = *pcb,
-        .clear_color = {{0, 0, 0, 1}},
-    });
+    auto rp = cmd_render_pass(sw, *pcb);
     m_ib.build_commands(*pcb);
     m_ps.cmd_push_vert_frag_constants(*pcb, pc);
     m_ps.cmd_bind_descriptor_set(*pcb, m_img.dset());
@@ -233,10 +236,7 @@ public:
 
   void run(voo::swapchain_and_stuff *sw,
            const voo::cmd_buf_one_time_submit &pcb) override {
-    auto rp = sw->cmd_render_pass({
-        .command_buffer = *pcb,
-        .clear_color = {{0, 0, 0, 1}},
-    });
+    auto rp = cmd_render_pass(sw, *pcb);
   }
 };
 
@@ -311,10 +311,7 @@ public:
         },
         sw->aspect());
 
-    auto rp = sw->cmd_render_pass({
-        .command_buffer = *pcb,
-        .clear_color = {{0, 0, 0, 1}},
-    });
+    auto rp = cmd_render_pass(sw, *pcb);
     m_ib.build_commands(*pcb);
     m_ps.cmd_push_vert_frag_constants(*pcb, pc);
 
@@ -494,10 +491,7 @@ public:
         },
         sw->aspect());
 
-    auto rp = sw->cmd_render_pass({
-        .command_buffer = *pcb,
-        .clear_color = {{0, 0, 0, 1}},
-    });
+    auto rp = cmd_render_pass(sw, *pcb);
     m_ib.build_commands(*pcb);
     m_ps.cmd_push_vert_frag_constants(*pcb, pc);
 
