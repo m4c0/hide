@@ -48,6 +48,17 @@ auto cmd_render_pass(voo::swapchain_and_stuff *sw, vee::command_buffer cb) {
       .clear_color = {{0, 0, 0, 1}},
   });
 }
+auto cmd_push_vert_frag_constants(voo::swapchain_and_stuff *sw,
+                                  vee::command_buffer cb,
+                                  quack::pipeline_stuff *ps) {
+  auto pc = quack::adjust_aspect(
+      {
+          .grid_pos = {0.0f, 0.5f},
+          .grid_size = {1.0f, 1.0f},
+      },
+      sw->aspect());
+  ps->cmd_push_vert_frag_constants(cb, pc);
+}
 
 class scene : public voo::update_thread {
   voo::device_and_queue *m_dq;
@@ -209,16 +220,9 @@ public:
 
   void run(voo::swapchain_and_stuff *sw,
            const voo::cmd_buf_one_time_submit &pcb) override {
-    auto pc = quack::adjust_aspect(
-        {
-            .grid_pos = {0.0f, 0.5f},
-            .grid_size = {1.0f, 1.0f},
-        },
-        sw->aspect());
-
     auto rp = cmd_render_pass(sw, *pcb);
     m_ib.build_commands(*pcb);
-    m_ps.cmd_push_vert_frag_constants(*pcb, pc);
+    cmd_push_vert_frag_constants(sw, *pcb, &m_ps);
     m_ps.cmd_bind_descriptor_set(*pcb, m_img.dset());
     m_ps.run(*pcb, 1);
   }
@@ -304,16 +308,9 @@ public:
 
   void run(voo::swapchain_and_stuff *sw,
            const voo::cmd_buf_one_time_submit &pcb) override {
-    auto pc = quack::adjust_aspect(
-        {
-            .grid_pos = {0.0f, 0.5f},
-            .grid_size = {1.0f, 1.0f},
-        },
-        sw->aspect());
-
     auto rp = cmd_render_pass(sw, *pcb);
     m_ib.build_commands(*pcb);
-    m_ps.cmd_push_vert_frag_constants(*pcb, pc);
+    cmd_push_vert_frag_constants(sw, *pcb, &m_ps);
 
     m_bg.run(&m_ps, *pcb);
 
@@ -484,16 +481,9 @@ public:
   }
   void run(voo::swapchain_and_stuff *sw,
            const voo::cmd_buf_one_time_submit &pcb) override {
-    auto pc = quack::adjust_aspect(
-        {
-            .grid_pos = {0.0f, 0.5f},
-            .grid_size = {1.0f, 1.0f},
-        },
-        sw->aspect());
-
     auto rp = cmd_render_pass(sw, *pcb);
     m_ib.build_commands(*pcb);
-    m_ps.cmd_push_vert_frag_constants(*pcb, pc);
+    cmd_push_vert_frag_constants(sw, *pcb, &m_ps);
 
     m_bg.run(&m_ps, *pcb);
 
