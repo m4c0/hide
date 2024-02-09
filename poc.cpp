@@ -320,7 +320,6 @@ public:
 };
 
 // TODO: fix weird submitting empty CB
-// TODO: fix random "flash of unstyled content"
 class main_menu : public scene {
   enum menu_options {
     o_new_game,
@@ -379,7 +378,8 @@ class main_menu : public scene {
   [[nodiscard]] auto time() const noexcept { return m_time.millis() / 1000.0; }
   [[nodiscard]] float alpha() const noexcept {
     float t = time();
-    return t >= 1 ? 1.0f : (m_selected ? 1.0f - t : t);
+    t = t >= 1 ? 1.0 : t;
+    return m_selected ? 1.0f - t : t;
   }
 
   void setup_positions(quack::rect *ps) const {
