@@ -277,12 +277,12 @@ public:
   selection_bg(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
       : m_sel{dq, ps, "m3-storeCounter_bar.png"} {}
 
-  void set_pos(quack::rect *ps, const quack::rect &p, quack::size sz) const {
+  void set_pos(quack::rect *ps, const quack::rect &p) const {
     ps[0] = p;
 
     ps[1] = ps[3] = ps[4] = ps[6] = {{}, {sel_border, sel_border}};
-    ps[2] = ps[5] = {{}, {sel_border, sz.h}};
-    ps[7] = ps[8] = {{}, {sz.w, sel_border}};
+    ps[2] = ps[5] = {{}, {sel_border, p.h}};
+    ps[7] = ps[8] = {{}, {p.w, sel_border}};
 
     ps[1].x = ps[2].x = ps[3].x = p.x - sel_border;
     ps[7].x = ps[8].x = p.x;
@@ -457,7 +457,7 @@ class main_menu : public scene {
       ps[i].y += h / 2.0f;
     }
 
-    m_sel.set_pos(ps + 7, ps[m_idx + 2], {menu_w, menu_h});
+    m_sel.set_pos(ps + 7, ps[m_idx + 2]);
   }
 
   using update_thread::run;
