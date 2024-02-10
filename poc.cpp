@@ -320,10 +320,11 @@ class options : public scene {
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
   background m_bg;
+  selection_bg m_sel;
   texts m_txt;
 
-  static constexpr const auto max_dset = 2;
-  static constexpr const auto max_sprites = 1 + o_count;
+  static constexpr const auto max_dset = 3;
+  static constexpr const auto max_sprites = 1 + o_count + 9;
 
   void build_cmd_buf(vee::command_buffer cb) override {
     voo::cmd_buf_one_time_submit pcb{cb};
@@ -336,6 +337,7 @@ public:
       , m_ps{*dq, max_dset}
       , m_ib{m_ps.create_batch(max_sprites)}
       , m_bg{dq, &m_ps}
+      , m_sel{dq, &m_ps}
       , m_txt{dq, &m_ps} {
     m_ib.map_all([this](auto all) {
       reset_quack(all, max_sprites);
@@ -352,6 +354,9 @@ public:
       }
       all.positions[1 + o_fullscreen].y += 0.02f;
       all.positions[1 + o_back].y += 0.02f * 2.f;
+
+      m_sel.set_pos(all.positions + 1 + o_count, all.positions[1]);
+      m_sel.set_uvs(all.uvs + 1 + o_count);
     });
 
     m_txt.run_once();
@@ -366,6 +371,7 @@ public:
     cmd_push_vert_frag_constants(sw, *pcb, &m_ps);
 
     m_bg.run(&m_ps, *pcb);
+    m_sel.run(&m_ps, *pcb, 1 + o_count);
 
     m_ps.cmd_bind_descriptor_set(*pcb, m_txt.dset());
     m_ps.run(*pcb, o_count, 1);
@@ -570,7 +576,7 @@ public:
   void run() override {
     voo::device_and_queue dq{"hide", native_ptr()};
 
-    hai::uptr<scene> s{new main_menu{&dq}};
+    hai::uptr<scene> s{new options{&dq}};
     m_s = &s;
     release_init_lock();
 
