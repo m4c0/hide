@@ -577,7 +577,7 @@ public:
 };
 scene *game::next() {
   if (m_time.millis() > 2000)
-    return new main_menu{device_and_queue()};
+    return new main_menu{device_and_queue(), true};
   return this;
 }
 
