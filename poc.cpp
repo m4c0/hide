@@ -114,16 +114,19 @@ class texts_shaper {
   unsigned m_h;
   int m_pen_y = font_h;
   float m_v0 = 0;
+  float m_y = 0;
+  quack::rect *m_pos;
   quack::uv *m_uvs;
 
 public:
-  texts_shaper(voo::h2l_image *img, quack::uv *uvs)
+  texts_shaper(voo::h2l_image *img, quack::rect *pos, quack::uv *uvs)
       : m_mem{img->host_memory()}
       , m_w{img->width()}
       , m_h{img->height()}
+      , m_pos{pos}
       , m_uvs{uvs} {}
 
-  void draw(jute::view str) {
+  void draw(jute::view str, float h) {
     auto &f = g_wtf_face_100;
 
     auto img = static_cast<unsigned char *>(*m_mem);
@@ -134,8 +137,12 @@ public:
     float v1 = m_v0 + 0.125f;
     *m_uvs++ = {{0, m_v0}, {u1, v1}};
 
+    float w = h * pen_x / line_h;
+    *m_pos++ = {{0, m_y}, {w, h}};
+
     m_pen_y += line_h;
     m_v0 = v1;
+    m_y += h;
   }
 };
 class texts : public voo::update_thread {
@@ -155,8 +162,8 @@ public:
       , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {
   }
 
-  [[nodiscard]] auto shaper(quack::uv *uvs) noexcept {
-    return texts_shaper{&m_img, uvs};
+  [[nodiscard]] auto shaper(quack::rect *pos, quack::uv *uvs) noexcept {
+    return texts_shaper{&m_img, pos, uvs};
   }
   [[nodiscard]] constexpr auto dset() const noexcept { return m_dset; }
 
@@ -330,14 +337,13 @@ public:
       reset_quack(all, max_sprites);
       m_bg.set_all(all);
 
-      auto s = m_txt.shaper(all.uvs + 1);
-      s.draw("Sound");
-      s.draw("Music");
-      s.draw("Fullscreen");
+      auto s = m_txt.shaper(all.positions + 1, all.uvs + 1);
+      s.draw("Sound", 0.0625f);
+      s.draw("Music", 0.0625f);
+      s.draw("Fullscreen", 0.0625f);
 
       for (auto i = 0; i < 3; i++) {
-        constexpr const auto w = 0.3f;
-        all.positions[1 + i] = {{-0.3f, i * 0.0625f}, {w, 0.0625f}};
+        all.positions[1 + i].x = -0.3f;
       }
       all.positions[1 + o_fullscreen].y += 0.02f;
     });
@@ -386,6 +392,8 @@ class main_menu : public scene {
 
   static constexpr const auto max_dset = 4;
   static constexpr const auto max_sprites = 2 + 5 + 9;
+  static constexpr const auto menu_w = 0.25f;
+  static constexpr const auto menu_h = 0.0625f;
 
   void build_cmd_buf(vee::command_buffer cb) override {
     auto a = alpha();
@@ -423,18 +431,21 @@ class main_menu : public scene {
   }
 
   void setup_positions(quack::rect *ps) const {
-    constexpr const auto menu_w = 0.25f;
-    constexpr const auto menu_h = 0.0625f;
-
     float a = alpha();
     // TODO: easy in/out
     // TODO: other kind of animations
     // TODO: adjust for vertical screens
     float hs = 0.5f * (1.0f - a);
 
-    ps[1] = {{0, -hs}, m_logo.size(0.5f)};
+    // TODO: move "initial positions" out
+    ps[1] = {{0, 0}, m_logo.size(0.5f)};
     for (auto i = 0; i < 5; i++) {
-      ps[2 + i] = {{0, hs + 0.05f + 0.5f + i * 0.0625f}, {menu_w, menu_h}};
+      ps[2 + i].y = ps[1 + i].y + ps[1 + i].h;
+    }
+
+    ps[1].y -= hs;
+    for (auto i = 0; i < 5; i++) {
+      ps[2 + i].y += hs + 0.05f;
     }
 
     auto h = 1.f - 0.05f;
@@ -446,7 +457,7 @@ class main_menu : public scene {
       ps[i].y += h / 2.0f;
     }
 
-    m_sel.set_pos(ps + 7, ps[m_idx + 2], ps[m_idx + 2]);
+    m_sel.set_pos(ps + 7, ps[m_idx + 2], {menu_w, menu_h});
   }
 
   using update_thread::run;
@@ -467,12 +478,12 @@ public:
 
       all.uvs[1] = {{0, 0}, {1, 1}};
 
-      auto s = m_texts.shaper(all.uvs + 2);
-      s.draw("New Game");
-      s.draw("Continue");
-      s.draw("Options");
-      s.draw("Credits");
-      s.draw("Exit");
+      auto s = m_texts.shaper(all.positions + 2, all.uvs + 2);
+      s.draw("New Game", menu_h);
+      s.draw("Continue", menu_h);
+      s.draw("Options", menu_h);
+      s.draw("Credits", menu_h);
+      s.draw("Exit", menu_h);
 
       m_sel.set_uvs(all.uvs + 7);
     });
