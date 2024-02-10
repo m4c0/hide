@@ -270,6 +270,7 @@ public:
 };
 class selection_bg {
   image m_sel;
+  unsigned m_idx{};
 
   static constexpr const auto sel_border = 0.01f;
 
@@ -277,7 +278,11 @@ public:
   selection_bg(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
       : m_sel{dq, ps, "m3-storeCounter_bar.png"} {}
 
-  void set_pos(quack::rect *ps, const quack::rect &p) const {
+  [[nodiscard]] constexpr auto index() const noexcept { return m_idx; }
+
+  void set_pos(quack::rect *ps, const quack::rect *all) const {
+    auto p = all[m_idx];
+
     ps[0] = p;
 
     ps[1] = ps[3] = ps[4] = ps[6] = {{}, {sel_border, sel_border}};
@@ -308,6 +313,13 @@ public:
     uvs[8] = {{l, b}, {r, 1}};
   }
 
+  void handle_key(casein::keys k, int max) {
+    if (k == casein::K_DOWN)
+      m_idx = (m_idx + 1) % max;
+    if (k == casein::K_UP)
+      m_idx = (m_idx + max - 1) % max;
+  }
+
   void run(quack::pipeline_stuff *ps, vee::command_buffer cb, unsigned first) {
     ps->cmd_bind_descriptor_set(cb, m_sel.dset());
     ps->run(cb, 9, first);
@@ -327,8 +339,23 @@ class options : public scene {
   static constexpr const auto max_sprites = 1 + o_count + 9;
 
   void build_cmd_buf(vee::command_buffer cb) override {
+    m_ib.map_positions([this](auto *ps) { setup_positions(ps); });
+
     voo::cmd_buf_one_time_submit pcb{cb};
     m_ib.setup_copy(cb);
+  }
+
+  void setup_positions(quack::rect *ps) {
+    for (auto i = 0; i < o_count; i++) {
+      ps[1 + i].x = -0.3f;
+    }
+    for (auto i = 1; i < o_count; i++) {
+      ps[1 + i].y = ps[i].y + ps[i].h;
+    }
+    ps[1 + o_fullscreen].y += 0.02f;
+    ps[1 + o_back].y += 0.02f * 2.f;
+
+    m_sel.set_pos(ps + 1 + o_count, ps + 1);
   }
 
 public:
@@ -349,13 +376,8 @@ public:
       s.draw("Fullscreen", 0.0625f);
       s.draw("Back", 0.0625f);
 
-      for (auto i = 0; i < o_count; i++) {
-        all.positions[1 + i].x = -0.3f;
-      }
-      all.positions[1 + o_fullscreen].y += 0.02f;
-      all.positions[1 + o_back].y += 0.02f * 2.f;
+      setup_positions(all.positions);
 
-      m_sel.set_pos(all.positions + 1 + o_count, all.positions[1]);
       m_sel.set_uvs(all.uvs + 1 + o_count);
     });
 
@@ -376,6 +398,8 @@ public:
     m_ps.cmd_bind_descriptor_set(*pcb, m_txt.dset());
     m_ps.run(*pcb, o_count, 1);
   }
+
+  void key_down(casein::keys k) override { m_sel.handle_key(k, o_count); }
 };
 
 // TODO: fix weird submitting empty CB
@@ -400,7 +424,6 @@ class main_menu : public scene {
   bool m_selected{};
 
   bool m_has_save{};
-  menu_options m_idx{};
 
   static constexpr const auto max_dset = 4;
   static constexpr const auto max_sprites = 2 + 5 + 9;
@@ -408,15 +431,18 @@ class main_menu : public scene {
   static constexpr const auto menu_h = 0.0625f;
 
   void build_cmd_buf(vee::command_buffer cb) override {
-    auto a = alpha();
-    m_ib.map_multipliers([this, a](auto *ms) {
+    m_ib.map_multipliers([this](auto *ms) {
+      auto a = alpha();
+      auto idx = m_sel.index();
+
       // TODO: show bg faster
       // TODO: "set alpha" in BG
       for (auto i = 0; i < max_sprites; i++)
         ms[i] = {1, 1, 1, a};
 
+      // TODO: set alpha in sel-bg
       for (auto i = 2; i < 7; i++) {
-        float n = (m_idx == i - 2) ? 0 : 1;
+        float n = (idx == i - 2) ? 0 : 1;
         ms[i] = {n, 0, 0, a};
       }
 
@@ -424,7 +450,7 @@ class main_menu : public scene {
         ms[3] = {0.6, 0.5, 0.5, a};
       }
       // TODO: set alpha in BG
-      if (m_idx == o_options) {
+      if (idx == o_options) {
         ms[0] = {1, 1, 1, 1};
       }
     });
@@ -469,7 +495,7 @@ class main_menu : public scene {
       ps[i].y += h / 2.0f;
     }
 
-    m_sel.set_pos(ps + 7, ps[m_idx + 2]);
+    m_sel.set_pos(ps + 7, ps + 2);
   }
 
   using update_thread::run;
@@ -509,7 +535,7 @@ public:
     if (!m_selected || time() < 1)
       return this;
 
-    switch (m_idx) {
+    switch (m_sel.index()) {
     case o_new_game:
     case o_continue:
       return new game{device_and_queue()};
@@ -541,15 +567,12 @@ public:
       return;
 
     do {
-      if (k == casein::K_DOWN)
-        m_idx = static_cast<menu_options>((m_idx + 1) % 5);
-      if (k == casein::K_UP)
-        m_idx = static_cast<menu_options>((m_idx + 4) % 5);
+      m_sel.handle_key(k, o_count);
       if (k == casein::K_ENTER) {
         m_time = {};
         m_selected = true;
       }
-    } while (!m_has_save && m_idx == o_continue);
+    } while (!m_has_save && m_sel.index() == o_continue);
   }
 };
 scene *game::next() {
