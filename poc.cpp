@@ -315,7 +315,7 @@ public:
 };
 
 class options : public scene {
-  enum items { o_sound, o_music, o_fullscreen, o_count };
+  enum items { o_sound, o_music, o_fullscreen, o_back, o_count };
 
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
@@ -323,7 +323,7 @@ class options : public scene {
   texts m_txt;
 
   static constexpr const auto max_dset = 2;
-  static constexpr const auto max_sprites = 1 + 3;
+  static constexpr const auto max_sprites = 1 + o_count;
 
   void build_cmd_buf(vee::command_buffer cb) override {
     voo::cmd_buf_one_time_submit pcb{cb};
@@ -345,11 +345,13 @@ public:
       s.draw("Sound", 0.0625f);
       s.draw("Music", 0.0625f);
       s.draw("Fullscreen", 0.0625f);
+      s.draw("Back", 0.0625f);
 
-      for (auto i = 0; i < 3; i++) {
+      for (auto i = 0; i < o_count; i++) {
         all.positions[1 + i].x = -0.3f;
       }
       all.positions[1 + o_fullscreen].y += 0.02f;
+      all.positions[1 + o_back].y += 0.02f * 2.f;
     });
 
     m_txt.run_once();
