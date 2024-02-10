@@ -406,8 +406,6 @@ class main_menu : public scene {
       ps[i].y += h / 2.0f;
     }
 
-    // TODO: merge this block with next
-    ps[7] = {};
     ps[8] = ps[10] = ps[11] = ps[13] = {{}, {sel_border, sel_border}};
     ps[9] = ps[12] = {{}, {sel_border, menu_h}};
     ps[14] = ps[15] = {{}, {menu_w, sel_border}};
