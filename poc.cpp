@@ -261,6 +261,47 @@ public:
     ps->run(cb, 1, 0);
   }
 };
+class selection_bg {
+  image m_sel;
+
+  static constexpr const auto sel_border = 0.01f;
+
+public:
+  selection_bg(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
+      : m_sel{dq, ps, "m3-storeCounter_bar.png"} {}
+
+  void set_pos(quack::rect *ps, const quack::rect &p, quack::size sz) const {
+    ps[0] = p;
+
+    ps[1] = ps[3] = ps[4] = ps[6] = {{}, {sel_border, sel_border}};
+    ps[2] = ps[5] = {{}, {sel_border, sz.h}};
+    ps[7] = ps[8] = {{}, {sz.w, sel_border}};
+
+    ps[1].x = ps[2].x = ps[3].x = p.x - sel_border;
+    ps[7].x = ps[8].x = p.x;
+    ps[4].x = ps[5].x = ps[6].x = p.x + p.w;
+
+    ps[1].y = ps[4].y = ps[7].y = p.y - sel_border;
+    ps[2].y = ps[5].y = p.y;
+    ps[3].y = ps[6].y = ps[8].y = p.y + p.h;
+  }
+  void set_uvs(quack::uv *uvs) const {
+    uvs[0] = {{0.25f, 0.25f}, {0.75f, 0.75f}};
+    uvs[1] = {{0.00f, 0.00f}, {0.25f, 0.25f}};
+    uvs[2] = {{0.00f, 0.25f}, {0.25f, 0.75f}};
+    uvs[3] = {{0.00f, 0.75f}, {0.25f, 1.00f}};
+    uvs[4] = {{0.75f, 0.00f}, {1.00f, 0.25f}};
+    uvs[5] = {{0.75f, 0.25f}, {1.00f, 0.75f}};
+    uvs[6] = {{0.75f, 0.75f}, {1.00f, 1.00f}};
+    uvs[7] = {{0.25f, 0.00f}, {0.75f, 0.25f}};
+    uvs[8] = {{0.25f, 0.75f}, {0.75f, 1.00f}};
+  }
+
+  void run(quack::pipeline_stuff *ps, vee::command_buffer cb, unsigned first) {
+    ps->cmd_bind_descriptor_set(cb, m_sel.dset());
+    ps->run(cb, 9, first);
+  }
+};
 
 class options : public scene {
   enum items { o_sound, o_music, o_fullscreen, o_count };
@@ -334,7 +375,7 @@ class main_menu : public scene {
   quack::instance_batch m_ib;
   background m_bg;
   image m_logo;
-  image m_sel;
+  selection_bg m_sel;
   texts m_texts;
 
   sitime::stopwatch m_time{};
@@ -345,7 +386,6 @@ class main_menu : public scene {
 
   static constexpr const auto max_dset = 4;
   static constexpr const auto max_sprites = 2 + 5 + 9;
-  static constexpr const auto sel_border = 0.01f;
 
   void build_cmd_buf(vee::command_buffer cb) override {
     auto a = alpha();
@@ -406,20 +446,7 @@ class main_menu : public scene {
       ps[i].y += h / 2.0f;
     }
 
-    ps[8] = ps[10] = ps[11] = ps[13] = {{}, {sel_border, sel_border}};
-    ps[9] = ps[12] = {{}, {sel_border, menu_h}};
-    ps[14] = ps[15] = {{}, {menu_w, sel_border}};
-
-    auto p = ps[m_idx + 2];
-    ps[7] = p;
-
-    ps[8].x = ps[9].x = ps[10].x = p.x - sel_border;
-    ps[14].x = ps[15].x = p.x;
-    ps[11].x = ps[12].x = ps[13].x = p.x + p.w;
-
-    ps[8].y = ps[11].y = ps[14].y = p.y - sel_border;
-    ps[9].y = ps[12].y = p.y;
-    ps[10].y = ps[13].y = ps[15].y = p.y + p.h;
+    m_sel.set_pos(ps + 7, ps[m_idx + 2], ps[m_idx + 2]);
   }
 
   using update_thread::run;
@@ -431,7 +458,7 @@ public:
       , m_ib{m_ps.create_batch(max_sprites)}
       , m_bg{dq, &m_ps}
       , m_logo{dq, &m_ps, "m3-game_title.png"}
-      , m_sel{dq, &m_ps, "m3-storeCounter_bar.png"}
+      , m_sel{dq, &m_ps}
       , m_texts{dq, &m_ps}
       , m_has_save{has_save} {
     m_ib.map_all([this](auto all) {
@@ -447,15 +474,7 @@ public:
       s.draw("Credits");
       s.draw("Exit");
 
-      all.uvs[7] = {{0.25f, 0.25f}, {0.75f, 0.75f}};
-      all.uvs[8] = {{0.00f, 0.00f}, {0.25f, 0.25f}};
-      all.uvs[9] = {{0.00f, 0.25f}, {0.25f, 0.75f}};
-      all.uvs[10] = {{0.00f, 0.75f}, {0.25f, 1.00f}};
-      all.uvs[11] = {{0.75f, 0.00f}, {1.00f, 0.25f}};
-      all.uvs[12] = {{0.75f, 0.25f}, {1.00f, 0.75f}};
-      all.uvs[13] = {{0.75f, 0.75f}, {1.00f, 1.00f}};
-      all.uvs[14] = {{0.25f, 0.00f}, {0.75f, 0.25f}};
-      all.uvs[15] = {{0.25f, 0.75f}, {0.75f, 1.00f}};
+      m_sel.set_uvs(all.uvs + 7);
     });
 
     m_ib.map_positions([this](auto *ps) { setup_positions(ps); });
@@ -488,8 +507,7 @@ public:
     m_ps.cmd_bind_descriptor_set(*pcb, m_logo.dset());
     m_ps.run(*pcb, 1, 1);
 
-    m_ps.cmd_bind_descriptor_set(*pcb, m_sel.dset());
-    m_ps.run(*pcb, 9, 7);
+    m_sel.run(&m_ps, *pcb, 7);
 
     m_ps.cmd_bind_descriptor_set(*pcb, m_texts.dset());
     m_ps.run(*pcb, o_count, 2);
