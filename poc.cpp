@@ -293,15 +293,19 @@ public:
     ps[3].y = ps[6].y = ps[8].y = p.y + p.h;
   }
   void set_uvs(quack::uv *uvs) const {
-    uvs[0] = {{0.25f, 0.25f}, {0.75f, 0.75f}};
-    uvs[1] = {{0.00f, 0.00f}, {0.25f, 0.25f}};
-    uvs[2] = {{0.00f, 0.25f}, {0.25f, 0.75f}};
-    uvs[3] = {{0.00f, 0.75f}, {0.25f, 1.00f}};
-    uvs[4] = {{0.75f, 0.00f}, {1.00f, 0.25f}};
-    uvs[5] = {{0.75f, 0.25f}, {1.00f, 0.75f}};
-    uvs[6] = {{0.75f, 0.75f}, {1.00f, 1.00f}};
-    uvs[7] = {{0.25f, 0.00f}, {0.75f, 0.25f}};
-    uvs[8] = {{0.25f, 0.75f}, {0.75f, 1.00f}};
+    constexpr const float t = 0.05;
+    constexpr const float b = 0.95;
+    constexpr const float l = 0.05;
+    constexpr const float r = 0.95;
+    uvs[0] = {{l, t}, {r, b}};
+    uvs[1] = {{0, 0}, {l, t}};
+    uvs[2] = {{0, t}, {l, b}};
+    uvs[3] = {{0, b}, {l, 1}};
+    uvs[4] = {{r, 0}, {1, t}};
+    uvs[5] = {{r, t}, {1, b}};
+    uvs[6] = {{r, b}, {1, 1}};
+    uvs[7] = {{l, 0}, {r, t}};
+    uvs[8] = {{l, b}, {r, 1}};
   }
 
   void run(quack::pipeline_stuff *ps, vee::command_buffer cb, unsigned first) {
