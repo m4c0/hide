@@ -565,8 +565,7 @@ public:
     m_s = &s;
     release_init_lock();
 
-    sith::memfn_thread<scene> thr{&*s, &scene::run};
-    thr.start();
+    sith::run_guard thr{&*s};
 
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
@@ -576,9 +575,9 @@ public:
 
         auto n = s->next();
         if (n != &*s) {
-          thr = {n, &scene::run};
+          thr = {};
           s.reset(n);
-          thr.start();
+          thr = sith::run_guard{n};
         }
       });
     }

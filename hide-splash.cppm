@@ -15,6 +15,8 @@ export class splash : public voo::update_thread {
 
   sitime::stopwatch m_time{};
 
+  sith::run_guard m_run{};
+
   [[nodiscard]] auto time() const noexcept { return m_time.millis() / 1000.0; }
   [[nodiscard]] auto alpha() const noexcept {
     float t = time();
@@ -52,9 +54,8 @@ public:
       all.colours[0] = {0, 0, 0, 0};
       all.uvs[0] = {{0, 0}, {1, 1}};
     });
-    start();
+    m_run = sith::run_guard{this};
   }
-  ~splash() { stop(); }
 
   [[nodiscard]] bool done() { return time() > 3; }
 
