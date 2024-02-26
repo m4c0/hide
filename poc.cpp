@@ -170,35 +170,9 @@ public:
 };
 
 class splash : public scene {
-  quack::pipeline_stuff m_ps;
-  quack::instance_batch m_ib;
-  image m_img;
+  hide::splash m_splash;
 
-  sitime::stopwatch m_time{};
-
-  [[nodiscard]] auto time() const noexcept { return m_time.millis() / 1000.0; }
-  [[nodiscard]] auto alpha() const noexcept {
-    float t = time();
-    float a = 1.0;
-    if (t < 1) {
-      a = t;
-    } else if (t > 2) {
-      a = 3.0 - t;
-      if (a < 0)
-        a = 0;
-    }
-    return a;
-  }
-
-  void build_cmd_buf(vee::command_buffer cb) override {
-    auto a = alpha();
-    m_ib.map_multipliers([a](auto *ms) { *ms = {1, 1, 1, a}; });
-
-    voo::cmd_buf_one_time_submit pcb{cb};
-    m_ib.setup_copy(cb);
-  }
-
-  using update_thread::run;
+  void build_cmd_buf(vee::command_buffer cb) override {}
 
 protected:
   virtual scene *create_next() = 0;
@@ -206,20 +180,11 @@ protected:
 public:
   splash(voo::device_and_queue *dq, jute::view name)
       : scene{dq}
-      , m_ps{*dq, 1}
-      , m_ib{m_ps.create_batch(1)}
-      , m_img{dq, &m_ps, name} {
-    m_ib.map_all([this](auto all) {
-      reset_quack(all, 1);
-
-      auto img_aspect = m_img.aspect();
-      all.positions[0] = {{-img_aspect / 2.f, 0}, {img_aspect, 1}};
-      all.uvs[0] = {{0, 0}, {1, 1}};
-    });
+      , m_splash{dq, name} {
   }
 
   [[nodiscard]] scene *next() override {
-    if (time() > 3)
+    if (m_splash.done())
       return create_next();
     return this;
   }
@@ -227,10 +192,7 @@ public:
   void run(voo::swapchain_and_stuff *sw,
            const voo::cmd_buf_one_time_submit &pcb) override {
     auto rp = cmd_render_pass(sw, *pcb);
-    m_ib.build_commands(*pcb);
-    cmd_push_vert_frag_constants(sw, *pcb, &m_ps);
-    m_ps.cmd_bind_descriptor_set(*pcb, m_img.dset());
-    m_ps.run(*pcb, 1);
+    m_splash.render(*pcb, sw->aspect());
   }
 };
 
