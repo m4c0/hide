@@ -61,7 +61,7 @@ auto cmd_push_vert_frag_constants(voo::swapchain_and_stuff *sw,
   ps->cmd_push_vert_frag_constants(cb, pc);
 }
 
-class scene : public voo::update_thread {
+class scene {
   voo::device_and_queue *m_dq;
 
 protected:
@@ -70,9 +70,7 @@ protected:
   }
 
 public:
-  scene(voo::device_and_queue *dq) : update_thread{dq->queue()}, m_dq{dq} {}
-
-  using update_thread::run;
+  scene(voo::device_and_queue *dq) : m_dq{dq} {}
 
   virtual ~scene() = default;
 
@@ -172,8 +170,6 @@ public:
 class splash : public scene {
   hide::splash m_splash;
 
-  void build_cmd_buf(vee::command_buffer cb) override {}
-
 protected:
   virtual scene *create_next() = 0;
 
@@ -198,8 +194,6 @@ public:
 
 class game : public scene {
   sitime::stopwatch m_time{};
-
-  void build_cmd_buf(vee::command_buffer cb) override {}
 
 public:
   using scene::scene;
@@ -287,7 +281,7 @@ public:
   }
 };
 
-class options : public scene {
+class options : public scene, public voo::update_thread {
   enum items { o_sound, o_music, o_fullscreen, o_back, o_count };
 
   quack::pipeline_stuff m_ps;
@@ -295,6 +289,8 @@ class options : public scene {
   background m_bg;
   selection_bg m_sel;
   texts m_txt;
+
+  sith::run_guard m_run{};
 
   static constexpr const auto max_dset = 3;
   static constexpr const auto max_sprites = 1 + o_count + 9;
@@ -319,9 +315,12 @@ class options : public scene {
     m_sel.set_pos(ps + 1 + o_count, ps + 1);
   }
 
+  using update_thread::run;
+
 public:
   options(voo::device_and_queue *dq)
       : scene{dq}
+      , update_thread{dq->queue()}
       , m_ps{*dq, max_dset}
       , m_ib{m_ps.create_batch(max_sprites)}
       , m_bg{dq, &m_ps}
@@ -343,6 +342,8 @@ public:
     });
 
     m_txt.run_once();
+
+    m_run = sith::run_guard{this};
   }
 
   [[nodiscard]] scene *next() override { return this; }
@@ -364,7 +365,7 @@ public:
 };
 
 // TODO: fix weird submitting empty CB
-class main_menu : public scene {
+class main_menu : public scene, public voo::update_thread {
   enum menu_options {
     o_new_game,
     o_continue,
@@ -385,6 +386,8 @@ class main_menu : public scene {
   bool m_selected{};
 
   bool m_has_save{};
+
+  sith::run_guard m_run{};
 
   static constexpr const auto max_dset = 4;
   static constexpr const auto max_sprites = 2 + 5 + 9;
@@ -464,6 +467,7 @@ class main_menu : public scene {
 public:
   explicit main_menu(voo::device_and_queue *dq, bool has_save = false)
       : scene{dq}
+      , update_thread{dq->queue()}
       , m_ps{*dq, max_dset}
       , m_ib{m_ps.create_batch(max_sprites)}
       , m_bg{dq, &m_ps}
@@ -490,6 +494,8 @@ public:
     m_ib.map_positions([this](auto *ps) { setup_positions(ps); });
 
     m_texts.run_once();
+
+    m_run = sith::run_guard{this};
   }
 
   scene *next() override {
@@ -565,8 +571,6 @@ public:
     m_s = &s;
     release_init_lock();
 
-    sith::run_guard thr{&*s};
-
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
 
@@ -575,9 +579,7 @@ public:
 
         auto n = s->next();
         if (n != &*s) {
-          thr = {};
           s.reset(n);
-          thr = sith::run_guard{n};
         }
       });
     }
