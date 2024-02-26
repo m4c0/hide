@@ -83,6 +83,28 @@ public:
   virtual void key_down(casein::keys k) {}
 };
 
+class image {
+  vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
+  voo::sires_image m_img;
+  vee::descriptor_set m_dset;
+
+public:
+  image(voo::device_and_queue *dq, quack::pipeline_stuff *ps, jute::view name)
+      : m_img{name, dq}
+      , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {
+    m_img.run_once();
+  }
+
+  [[nodiscard]] constexpr auto dset() const noexcept { return m_dset; }
+  [[nodiscard]] constexpr auto aspect() const noexcept {
+    return static_cast<float>(m_img.width()) /
+           static_cast<float>(m_img.height());
+  }
+
+  [[nodiscard]] constexpr auto size(float h) const noexcept {
+    return quack::size{h * aspect(), h};
+  }
+};
 class texts_shaper {
   static constexpr const auto line_h = 128;
   static constexpr const auto font_h = 100;
@@ -151,7 +173,7 @@ public:
 class splash : public scene {
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
-  hide::image m_img;
+  image m_img;
 
   sitime::stopwatch m_time{};
 
@@ -230,7 +252,7 @@ public:
 };
 
 class background {
-  hide::image m_bg;
+  image m_bg;
 
 public:
   background(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
@@ -247,7 +269,7 @@ public:
   }
 };
 class selection_bg {
-  hide::image m_sel;
+  image m_sel;
   unsigned m_idx{};
 
   static constexpr const auto sel_border = 0.01f;
@@ -394,7 +416,7 @@ class main_menu : public scene {
   quack::pipeline_stuff m_ps;
   quack::instance_batch m_ib;
   background m_bg;
-  hide::image m_logo;
+  image m_logo;
   selection_bg m_sel;
   texts m_texts;
 

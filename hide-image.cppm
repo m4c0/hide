@@ -5,8 +5,7 @@ import vee;
 import voo;
 
 namespace hide {
-// TODO: internalise image or remove quack dependency
-export class image {
+class image {
   vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
   voo::sires_image m_img;
   vee::descriptor_set m_dset;
@@ -28,5 +27,4 @@ public:
     return quack::size{h * aspect(), h};
   }
 };
-
 } // namespace hide
