@@ -43,10 +43,13 @@ export class splash : public voo::update_thread {
 
 public:
   splash(voo::device_and_queue *dq, jute::view name)
-      : update_thread{dq->queue()}
-      , m_ps{*dq, 1}
+      : splash(dq->queue(), dq->physical_device(), dq->render_pass(), name) {}
+  splash(voo::queue *q, vee::physical_device pd, vee::render_pass::type rp,
+         jute::view name)
+      : update_thread{q}
+      , m_ps{pd, rp, 1}
       , m_ib{m_ps.create_batch(1)}
-      , m_img{dq, &m_ps, name} {
+      , m_img{pd, q, &m_ps, name} {
     m_ib.map_all([this](auto all) {
       auto img_aspect = m_img.aspect();
       all.positions[0] = {{-img_aspect / 2.f, 0}, {img_aspect, 1}};

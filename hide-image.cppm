@@ -11,8 +11,9 @@ class image {
   vee::descriptor_set m_dset;
 
 public:
-  image(voo::device_and_queue *dq, quack::pipeline_stuff *ps, jute::view name)
-      : m_img{name, dq}
+  image(vee::physical_device pd, voo::queue *q, quack::pipeline_stuff *ps,
+        jute::view name)
+      : m_img{name, pd, q}
       , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {
     m_img.run_once();
   }
