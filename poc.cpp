@@ -70,7 +70,7 @@ protected:
   }
 
 public:
-  scene(voo::device_and_queue *dq) : update_thread{dq}, m_dq{dq} {}
+  scene(voo::device_and_queue *dq) : update_thread{dq->queue()}, m_dq{dq} {}
 
   using update_thread::run;
 
@@ -157,10 +157,9 @@ class texts : public voo::update_thread {
 
 public:
   texts(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
-      : update_thread{dq}
+      : update_thread{dq->queue()}
       , m_img{*dq, 1024, 1024, false}
-      , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {
-  }
+      , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {}
 
   [[nodiscard]] auto shaper(quack::rect *pos, quack::uv *uvs) noexcept {
     return texts_shaper{&m_img, pos, uvs};
@@ -598,6 +597,7 @@ class renderer : public voo::casein_thread {
 public:
   void run() override {
     voo::device_and_queue dq{"hide", native_ptr()};
+    auto q = dq.queue();
 
     hai::uptr<scene> s{new splash_1{&dq}};
     m_s = &s;
@@ -609,8 +609,8 @@ public:
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
 
-      extent_loop(dq, sw, [&] {
-        sw.queue_one_time_submit(dq, [&](auto pcb) { s->run(&sw, pcb); });
+      extent_loop(q, sw, [&] {
+        sw.queue_one_time_submit(q, [&](auto pcb) { s->run(&sw, pcb); });
 
         auto n = s->next();
         if (n != &*s) {
