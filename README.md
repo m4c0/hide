@@ -17,3 +17,11 @@ pack][match3] created by DevilWork.shop.
 
 [lenna]: https://en.wikipedia.org/wiki/Lenna
 [match3]: https://devilsworkshop.itch.io/match-3-free-2d-sprites-game-art-and-ui
+
+## Reusable pieces
+
+Goals for any code exported from the `hide` module:
+
+* Usage out-of-box, requiring only `vee` - all other dependencies must be
+  weakly decomposable to `vee` wrappers or Vulkan handlers. This reduces the
+  dependency hell that might be caused by higher-level Vulkan libraries.
