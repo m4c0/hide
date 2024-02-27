@@ -25,8 +25,17 @@ class thread : public voo::casein_thread {
     voo::one_quad quad{dq.physical_device()};
     voo::h2l_buffer insts{dq.physical_device(), max_quads * sizeof(rect)};
 
+    auto smp = vee::create_sampler(vee::linear_sampler);
+    auto dpool =
+        vee::create_descriptor_pool(1, {vee::combined_image_sampler()});
+    auto dsl = vee::create_descriptor_set_layout({vee::dsl_fragment_sampler()});
+
+    auto dset = vee::allocate_descriptor_set(*dpool, *dsl);
+
     voo::sires_image spl1{"BrainF.png", &dq};
     spl1.run_once();
+    vee::update_descriptor_set(dset, 0, spl1.iv(), *smp);
+
     auto spl1_aspect =
         static_cast<float>(spl1.width()) / static_cast<float>(spl1.height());
 
@@ -36,7 +45,6 @@ class thread : public voo::casein_thread {
       buf[0] = {{-0.8f * spl1_aspect, -0.8f}, {1.6f * spl1_aspect, 1.6f}};
     }
 
-    auto dsl = vee::create_descriptor_set_layout({vee::dsl_fragment_sampler()});
     auto pl = vee::create_pipeline_layout(
         {*dsl}, {vee::vertex_push_constant_range<upc>()});
     auto gp = vee::create_graphics_pipeline({
@@ -56,14 +64,6 @@ class thread : public voo::casein_thread {
             vee::vertex_attribute_vec2(1, sizeof(dotz::vec2)),
         },
     });
-
-    auto dpool =
-        vee::create_descriptor_pool(1, {vee::combined_image_sampler()});
-    auto dset = vee::allocate_descriptor_set(*dpool, *dsl);
-
-    auto smp = vee::create_sampler(vee::linear_sampler);
-
-    vee::update_descriptor_set(dset, 0, spl1.iv(), *smp);
 
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
