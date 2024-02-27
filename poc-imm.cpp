@@ -5,6 +5,7 @@
 
 import casein;
 import dotz;
+import hide;
 import vee;
 import voo;
 
@@ -30,19 +31,12 @@ class thread : public voo::casein_thread {
         vee::create_descriptor_pool(1, {vee::combined_image_sampler()});
     auto dsl = vee::create_descriptor_set_layout({vee::dsl_fragment_sampler()});
 
-    auto dset = vee::allocate_descriptor_set(*dpool, *dsl);
-
-    voo::sires_image spl1{"BrainF.png", &dq};
-    spl1.run_once();
-    vee::update_descriptor_set(dset, 0, spl1.iv(), *smp);
-
-    auto spl1_aspect =
-        static_cast<float>(spl1.width()) / static_cast<float>(spl1.height());
-
+    hide::image spl1{dq.physical_device(), dq.queue(),
+                     vee::allocate_descriptor_set(*dpool, *dsl), "BrainF.png"};
     {
       voo::mapmem m{insts.host_memory()};
       auto buf = static_cast<rect *>(*m);
-      buf[0] = {{-0.8f * spl1_aspect, -0.8f}, {1.6f * spl1_aspect, 1.6f}};
+      buf[0] = {{-0.8f * spl1.aspect(), -0.8f}, {1.6f * spl1.aspect(), 1.6f}};
     }
 
     auto pl = vee::create_pipeline_layout(
@@ -81,7 +75,7 @@ class thread : public voo::casein_thread {
           vee::cmd_bind_gr_pipeline(*pcb, *gp);
           vee::cmd_push_vertex_constants(*pcb, *pl, &pc);
           vee::cmd_bind_vertex_buffers(*pcb, 1, insts.local_buffer());
-          vee::cmd_bind_descriptor_set(*pcb, *pl, 0, dset);
+          vee::cmd_bind_descriptor_set(*pcb, *pl, 0, spl1.dset());
           quad.run(*pcb, 0);
         });
       });
