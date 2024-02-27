@@ -26,6 +26,9 @@ class thread : public voo::casein_thread {
     voo::one_quad quad{dq.physical_device()};
     voo::h2l_buffer insts{dq.physical_device(), max_quads * sizeof(rect)};
 
+    auto cpool = vee::create_command_pool(dq.queue_family());
+    auto scb = vee::allocate_secondary_command_buffer(*cpool);
+
     auto smp = vee::create_sampler(vee::linear_sampler);
     auto dpool =
         vee::create_descriptor_pool(1, {vee::combined_image_sampler()});
@@ -33,11 +36,6 @@ class thread : public voo::casein_thread {
 
     hide::image spl1{dq.physical_device(), dq.queue(),
                      vee::allocate_descriptor_set(*dpool, *dsl), "BrainF.png"};
-    {
-      voo::mapmem m{insts.host_memory()};
-      auto buf = static_cast<rect *>(*m);
-      buf[0] = {{-0.8f * spl1.aspect(), -0.8f}, {1.6f * spl1.aspect(), 1.6f}};
-    }
 
     auto pl = vee::create_pipeline_layout(
         {*dsl}, {vee::vertex_push_constant_range<upc>()});
@@ -62,21 +60,32 @@ class thread : public voo::casein_thread {
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
 
+      {
+        upc pc{sw.aspect()};
+
+        auto rpc = sw.cmd_buf_render_pass_continue(scb);
+        vee::cmd_bind_gr_pipeline(*rpc, *gp);
+        vee::cmd_push_vertex_constants(*rpc, *pl, &pc);
+        vee::cmd_bind_vertex_buffers(*rpc, 1, insts.local_buffer());
+
+        voo::mapmem m{insts.host_memory()};
+        auto buf = static_cast<rect *>(*m);
+
+        buf[0] = {{-0.8f * spl1.aspect(), -0.8f}, {1.6f * spl1.aspect(), 1.6f}};
+        vee::cmd_bind_descriptor_set(*rpc, *pl, 0, spl1.dset());
+        quad.run(*rpc, 0, 1, 0);
+      }
+
       extent_loop(dq.queue(), sw, [&] {
         sw.queue_one_time_submit(dq.queue(), [&](auto pcb) {
           insts.setup_copy(*pcb);
 
-          upc pc{sw.aspect()};
-
           auto rp = sw.cmd_render_pass({
               .command_buffer = *pcb,
               .clear_color = {},
+              .use_secondary_cmd_buf = true,
           });
-          vee::cmd_bind_gr_pipeline(*pcb, *gp);
-          vee::cmd_push_vertex_constants(*pcb, *pl, &pc);
-          vee::cmd_bind_vertex_buffers(*pcb, 1, insts.local_buffer());
-          vee::cmd_bind_descriptor_set(*pcb, *pl, 0, spl1.dset());
-          quad.run(*pcb, 0);
+          vee::cmd_execute_command(*pcb, scb);
         });
       });
     }
