@@ -11,6 +11,9 @@ struct rect {
   dotz::vec2 pos;
   dotz::vec2 size;
 };
+struct upc {
+  float aspect;
+};
 
 static constexpr const auto max_quads = 10240;
 
@@ -27,7 +30,8 @@ class thread : public voo::casein_thread {
       *buf++ = {{-0.8f, -0.8f}, {1.6f, 1.6f}};
     }
 
-    auto pl = vee::create_pipeline_layout();
+    auto pl =
+        vee::create_pipeline_layout({vee::vertex_push_constant_range<upc>()});
     auto gp = vee::create_graphics_pipeline({
         .pipeline_layout = *pl,
         .render_pass = dq.render_pass(),
@@ -53,11 +57,14 @@ class thread : public voo::casein_thread {
         sw.queue_one_time_submit(dq.queue(), [&](auto pcb) {
           insts.setup_copy(*pcb);
 
+          upc pc{sw.aspect()};
+
           auto rp = sw.cmd_render_pass({
               .command_buffer = *pcb,
               .clear_color = {},
           });
           vee::cmd_bind_gr_pipeline(*pcb, *gp);
+          vee::cmd_push_vertex_constants(*pcb, *pl, &pc);
           vee::cmd_bind_vertex_buffers(*pcb, 1, insts.local_buffer());
           quad.run(*pcb, 0);
         });
