@@ -1,74 +1,65 @@
 #pragma leco app
+#pragma leco add_shader "poc-imm.frag"
+#pragma leco add_shader "poc-imm.vert"
 
 import casein;
 import dotz;
-import sith;
-import sitime;
 import vee;
 import voo;
-
-namespace splash {
-[[nodiscard]] float alpha(const sitime::stopwatch &time) {
-  auto t = time.millis();
-  if (t < 1.0)
-    return t;
-  if (t < 2.0)
-    return 1.0f;
-  if (t < 3.0)
-    return 3.0f - t;
-  return 0.0f;
-}
-} // namespace splash
 
 struct rect {
   dotz::vec2 pos;
   dotz::vec2 size;
-  float alpha;
 };
 
-class layout_thread : public voo::update_thread {
-  static constexpr const auto max_quads = 10240;
-
-  voo::h2l_buffer m_buffer;
-  sitime::stopwatch m_time{};
-
-  void build_cmd_buf(vee::command_buffer cb) override {
-    voo::mapmem m{m_buffer.host_memory()};
-    auto buf = static_cast<rect *>(*m);
-
-    float alpha = splash::alpha(m_time);
-    *buf++ = {{0, 0}, {1, 1}, alpha};
-
-    voo::cmd_buf_one_time_submit pcb{cb};
-    m_buffer.setup_copy(cb);
-  }
-
-public:
-  explicit layout_thread(vee::physical_device pd, voo::queue *q)
-      : update_thread{q}
-      , m_buffer{pd, max_quads * sizeof(rect)} {
-    run_once();
-  }
-};
+static constexpr const auto max_quads = 10240;
 
 class thread : public voo::casein_thread {
   void run() override {
     voo::device_and_queue dq{"hide-immediate", native_ptr()};
 
     voo::one_quad quad{dq.physical_device()};
-    layout_thread layout{dq.physical_device(), dq.queue()};
+    voo::h2l_buffer insts{dq.physical_device(), max_quads * sizeof(rect)};
+
+    {
+      voo::mapmem m{insts.host_memory()};
+      auto buf = static_cast<rect *>(*m);
+      *buf++ = {{-0.8f, -0.8f}, {1.6f, 1.6f}};
+    }
+
+    auto pl = vee::create_pipeline_layout();
+    auto gp = vee::create_graphics_pipeline({
+        .pipeline_layout = *pl,
+        .render_pass = dq.render_pass(),
+        .shaders{
+            voo::shader("poc-imm.vert.spv").pipeline_vert_stage(),
+            voo::shader("poc-imm.frag.spv").pipeline_frag_stage(),
+        },
+        .bindings{
+            quad.vertex_input_bind(),
+            vee::vertex_input_bind_per_instance(sizeof(rect)),
+        },
+        .attributes{
+            quad.vertex_attribute(0),
+            vee::vertex_attribute_vec2(1, 0),
+            vee::vertex_attribute_vec2(1, sizeof(dotz::vec2)),
+        },
+    });
 
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
 
-      sith::run_guard lr{&layout};
-
       extent_loop(dq.queue(), sw, [&] {
         sw.queue_one_time_submit(dq.queue(), [&](auto pcb) {
+          insts.setup_copy(*pcb);
+
           auto rp = sw.cmd_render_pass({
               .command_buffer = *pcb,
               .clear_color = {},
           });
+          vee::cmd_bind_gr_pipeline(*pcb, *gp);
+          vee::cmd_bind_vertex_buffers(*pcb, 1, insts.local_buffer());
+          quad.run(*pcb, 0);
         });
       });
     }
