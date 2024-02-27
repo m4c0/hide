@@ -6,6 +6,7 @@
 import casein;
 import dotz;
 import hide;
+import sitime;
 import vee;
 import voo;
 
@@ -57,6 +58,8 @@ class thread : public voo::casein_thread {
         },
     });
 
+    sitime::stopwatch time{};
+
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
 
@@ -70,10 +73,17 @@ class thread : public voo::casein_thread {
 
         voo::mapmem m{insts.host_memory()};
         auto buf = static_cast<rect *>(*m);
+        const auto first = buf;
 
-        buf[0] = {{-0.8f * spl1.aspect(), -0.8f}, {1.6f * spl1.aspect(), 1.6f}};
-        vee::cmd_bind_descriptor_set(*rpc, *pl, 0, spl1.dset());
-        quad.run(*rpc, 0, 1, 0);
+        if (time.millis() < 3.0f) {
+          auto base = buf;
+          vee::cmd_bind_descriptor_set(*rpc, *pl, 0, spl1.dset());
+          *buf++ = {{-0.8f * spl1.aspect(), -0.8f},
+                    {1.6f * spl1.aspect(), 1.6f}};
+          quad.run(*rpc, 0, (buf - base), (base - first));
+        } else if (time.millis() < 6.0f) {
+          // same, but spl2
+        }
       }
 
       extent_loop(dq.queue(), sw, [&] {
