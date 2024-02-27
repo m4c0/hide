@@ -1,6 +1,7 @@
 #pragma leco app
 #pragma leco add_shader "poc-imm.frag"
 #pragma leco add_shader "poc-imm.vert"
+#pragma leco add_resource "BrainF.png"
 
 import casein;
 import dotz;
@@ -24,10 +25,14 @@ class thread : public voo::casein_thread {
     voo::one_quad quad{dq.physical_device()};
     voo::h2l_buffer insts{dq.physical_device(), max_quads * sizeof(rect)};
 
+    voo::sires_image spl1{"BrainF.png", &dq};
+    auto spl1_aspect =
+        static_cast<float>(spl1.width()) / static_cast<float>(spl1.height());
+
     {
       voo::mapmem m{insts.host_memory()};
       auto buf = static_cast<rect *>(*m);
-      *buf++ = {{-0.8f, -0.8f}, {1.6f, 1.6f}};
+      *buf++ = {{-0.8f * spl1_aspect, -0.8f}, {1.6f * spl1_aspect, 1.6f}};
     }
 
     auto pl =
