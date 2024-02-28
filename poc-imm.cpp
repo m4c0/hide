@@ -96,7 +96,7 @@ class thread : public voo::casein_thread {
           if (ms > 3000.0f)
             return false;
 
-          stamp(spl, 0.0f, {1.6f * spl.aspect(), 1.6f});
+          stamp(spl, 0.0f, spl.size(1.6f));
           // TODO: how to tween alpha and keep cmd_buf and vbuf intact?
           // TODO: lazy load image or pause until image is loaded?
           return true;
@@ -109,7 +109,7 @@ class thread : public voo::casein_thread {
 
         // main menu
         stamp(bg, 0.0f, {2.0f * sw.aspect(), 2.0f});
-        stamp(logo, -0.5f, {0.6f * logo.aspect(), 0.6f});
+        stamp(logo, -0.5f, logo.size(0.6f));
 
         // selection
         // menu
