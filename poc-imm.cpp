@@ -13,6 +13,8 @@ import sitime;
 import vee;
 import voo;
 
+extern "C" float sinf(float);
+
 struct rect {
   dotz::vec2 pos;
   dotz::vec2 size;
@@ -102,13 +104,14 @@ class thread : public voo::casein_thread {
         auto buf = static_cast<inst *>(*m);
         const auto first = buf;
 
-        const auto stamp = [&](auto &img, float y, dotz::vec2 sz) {
+        const auto stamp = [&](auto &img, float y, dotz::vec2 sz,
+                               float a = 1.0f) {
           auto base = buf;
           vee::cmd_bind_descriptor_set(*rpc, *pl, 0, img.dset());
           *buf++ = {
               .r = {{-sz.x * 0.5f, y - sz.y * 0.5f}, sz},
               .uv = {{0, 0}, {1, 1}},
-              .mult = {1, 1, 1, 1},
+              .mult = {1.0f, 1.0f, 1.0f, a},
           };
           quad.run(*rpc, 0, (buf - base), (base - first));
         };
@@ -116,7 +119,10 @@ class thread : public voo::casein_thread {
           if (ms > 3000.0f)
             return false;
 
-          stamp(spl, 0.0f, spl.size(1.6f));
+          float s = ms / 1000.0f;
+          float a = sinf(s * 3.14 / 3.0);
+
+          stamp(spl, 0.0f, spl.size(1.6f), a);
           // TODO: how to tween alpha and keep cmd_buf and vbuf intact?
           // TODO: lazy load image or pause until image is loaded?
           return true;
