@@ -34,7 +34,7 @@ class thread : public voo::casein_thread {
     auto scb = vee::allocate_secondary_command_buffer(*cpool);
 
     auto dpool =
-        vee::create_descriptor_pool(4, {vee::combined_image_sampler(4)});
+        vee::create_descriptor_pool(16, {vee::combined_image_sampler(16)});
     auto dsl = vee::create_descriptor_set_layout({vee::dsl_fragment_sampler()});
 
     hide::image spl1{dq.physical_device(), dq.queue(),
@@ -47,6 +47,14 @@ class thread : public voo::casein_thread {
     hide::image logo{dq.physical_device(), dq.queue(),
                      vee::allocate_descriptor_set(*dpool, *dsl),
                      "m3-game_title.png"};
+
+    hide::text main_menu{dq.physical_device(), dq.queue(),
+                         vee::allocate_descriptor_set(*dpool, *dsl)};
+    main_menu.draw("New Game");
+    main_menu.draw("Continue");
+    main_menu.draw("Options");
+    main_menu.draw("Credits");
+    main_menu.draw("Exit");
 
     auto pl = vee::create_pipeline_layout(
         {*dsl}, {vee::vertex_push_constant_range<upc>()});
@@ -110,6 +118,7 @@ class thread : public voo::casein_thread {
         // main menu
         stamp(bg, 0.0f, {2.0f * sw.aspect(), 2.0f});
         stamp(logo, -0.5f, logo.size(0.6f));
+        stamp(main_menu, 0.6f, {1.3f, 1.3f});
 
         // selection
         // menu
@@ -119,6 +128,7 @@ class thread : public voo::casein_thread {
         refresh();
 
         sw.queue_one_time_submit(dq.queue(), [&](auto pcb) {
+          main_menu.setup_copy(*pcb);
           insts.setup_copy(*pcb);
 
           auto rp = sw.cmd_render_pass({
