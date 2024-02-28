@@ -20,6 +20,7 @@ struct rect {
 struct inst {
   rect r;
   rect uv;
+  dotz::vec4 mult;
 };
 struct upc {
   float aspect;
@@ -80,6 +81,7 @@ class thread : public voo::casein_thread {
             vee::vertex_attribute_vec2(1, sizeof(dotz::vec2)),
             vee::vertex_attribute_vec2(1, 2 * sizeof(dotz::vec2)),
             vee::vertex_attribute_vec2(1, 3 * sizeof(dotz::vec2)),
+            vee::vertex_attribute_vec4(1, 4 * sizeof(dotz::vec2)),
         },
     });
 
@@ -103,7 +105,11 @@ class thread : public voo::casein_thread {
         const auto stamp = [&](auto &img, float y, dotz::vec2 sz) {
           auto base = buf;
           vee::cmd_bind_descriptor_set(*rpc, *pl, 0, img.dset());
-          *buf++ = {{{-sz.x * 0.5f, y - sz.y * 0.5f}, sz}, {{0, 0}, {1, 1}}};
+          *buf++ = {
+              .r = {{-sz.x * 0.5f, y - sz.y * 0.5f}, sz},
+              .uv = {{0, 0}, {1, 1}},
+              .mult = {1, 1, 1, 1},
+          };
           quad.run(*rpc, 0, (buf - base), (base - first));
         };
         const auto splash = [&](auto &spl, float ms) {
@@ -132,7 +138,11 @@ class thread : public voo::casein_thread {
         for (auto uv : main_menu_szs) {
           auto sz = uv * 1.4f;
           auto hsz = -sz * 0.5f;
-          *buf++ = {{{hsz.x, y + hsz.y}, sz}, {{0.0f, v}, uv}};
+          *buf++ = {
+              .r = {{hsz.x, y + hsz.y}, sz},
+              .uv = {{0.0f, v}, uv},
+              .mult = {0.5f, 0.2f, 0.1f, 1.0f},
+          };
           y += sz.y;
           v += uv.y;
         }
