@@ -81,6 +81,8 @@ class thread : public voo::casein_thread {
           *buf++ = {{-0.8f * spl1.aspect(), -0.8f},
                     {1.6f * spl1.aspect(), 1.6f}};
           quad.run(*rpc, 0, (buf - base), (base - first));
+          // TODO: how to tween alpha and keep cmd_buf and vbuf intact?
+          // TODO: lazy load image or pause until image is loaded?
         } else if (time.millis() < 6.0f) {
           // same, but spl2
         }
