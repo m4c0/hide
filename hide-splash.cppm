@@ -49,7 +49,7 @@ public:
       : update_thread{q}
       , m_ps{pd, rp, 1}
       , m_ib{m_ps.create_batch(1)}
-      , m_img{pd, q, &m_ps, name} {
+      , m_img{pd, q, m_ps.allocate_descriptor_set(), name} {
     m_ib.map_all([this](auto all) {
       auto img_aspect = m_img.aspect();
       all.positions[0] = {{-img_aspect / 2.f, 0}, {img_aspect, 1}};
