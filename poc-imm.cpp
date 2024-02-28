@@ -79,20 +79,23 @@ class thread : public voo::casein_thread {
         auto buf = static_cast<rect *>(*m);
         const auto first = buf;
 
-        const auto splash = [&](auto &spl) {
+        const auto splash = [&](auto &spl, float ms) {
+          if (ms > 3000.0f)
+            return false;
+
           auto base = buf;
           vee::cmd_bind_descriptor_set(*rpc, *pl, 0, spl.dset());
           *buf++ = {{-0.8f * spl.aspect(), -0.8f}, {1.6f * spl.aspect(), 1.6f}};
           quad.run(*rpc, 0, (buf - base), (base - first));
           // TODO: how to tween alpha and keep cmd_buf and vbuf intact?
           // TODO: lazy load image or pause until image is loaded?
+          return true;
         };
 
-        if (time.millis() < 3000.0f) {
-          splash(spl1);
-        } else if (time.millis() < 6000.0f) {
-          splash(spl2);
-        }
+        if (splash(spl1, time.millis()))
+          return;
+        if (splash(spl2, time.millis() - 3000.0f))
+          return;
       };
 
       extent_loop(dq.queue(), sw, [&] {
