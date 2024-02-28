@@ -3,6 +3,8 @@
 #pragma leco add_shader "poc-imm.vert"
 #pragma leco add_resource "BrainF.png"
 #pragma leco add_resource "Lenna_(test_image).png"
+#pragma leco add_resource "m3-bg.png"
+#pragma leco add_resource "m3-game_title.png"
 
 import casein;
 import dotz;
@@ -31,9 +33,8 @@ class thread : public voo::casein_thread {
     auto cpool = vee::create_command_pool(dq.queue_family());
     auto scb = vee::allocate_secondary_command_buffer(*cpool);
 
-    auto smp = vee::create_sampler(vee::linear_sampler);
     auto dpool =
-        vee::create_descriptor_pool(2, {vee::combined_image_sampler(2)});
+        vee::create_descriptor_pool(4, {vee::combined_image_sampler(4)});
     auto dsl = vee::create_descriptor_set_layout({vee::dsl_fragment_sampler()});
 
     hide::image spl1{dq.physical_device(), dq.queue(),
@@ -41,12 +42,18 @@ class thread : public voo::casein_thread {
     hide::image spl2{dq.physical_device(), dq.queue(),
                      vee::allocate_descriptor_set(*dpool, *dsl),
                      "Lenna_(test_image).png"};
+    hide::image bg{dq.physical_device(), dq.queue(),
+                   vee::allocate_descriptor_set(*dpool, *dsl), "m3-bg.png"};
+    hide::image logo{dq.physical_device(), dq.queue(),
+                     vee::allocate_descriptor_set(*dpool, *dsl),
+                     "m3-game_title.png"};
 
     auto pl = vee::create_pipeline_layout(
         {*dsl}, {vee::vertex_push_constant_range<upc>()});
     auto gp = vee::create_graphics_pipeline({
         .pipeline_layout = *pl,
         .render_pass = dq.render_pass(),
+        .depth_test = false,
         .shaders{
             voo::shader("poc-imm.vert.spv").pipeline_vert_stage(),
             voo::shader("poc-imm.frag.spv").pipeline_frag_stage(),
@@ -96,6 +103,20 @@ class thread : public voo::casein_thread {
           return;
         if (splash(spl2, time.millis() - 3000.0f))
           return;
+
+        // main menu
+        auto base = buf;
+        vee::cmd_bind_descriptor_set(*rpc, *pl, 0, bg.dset());
+        *buf++ = {{-1.0f * sw.aspect(), -1.0f}, {2.0f * sw.aspect(), 2.0f}};
+        quad.run(*rpc, 0, (buf - base), (base - first));
+
+        base = buf;
+        vee::cmd_bind_descriptor_set(*rpc, *pl, 0, logo.dset());
+        *buf++ = {{-0.3f * logo.aspect(), -0.8f}, {0.6f * logo.aspect(), 0.6f}};
+        quad.run(*rpc, 0, (buf - base), (base - first));
+        
+        // selection
+        // menu
       };
 
       extent_loop(dq.queue(), sw, [&] {
