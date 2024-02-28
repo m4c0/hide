@@ -128,10 +128,13 @@ class thread : public voo::casein_thread {
         auto base = buf;
         vee::cmd_bind_descriptor_set(*rpc, *pl, 0, main_menu.dset());
         float y = 0.0f;
-        for (auto sz : main_menu_szs) {
+        float v = 0.0f;
+        for (auto uv : main_menu_szs) {
+          auto sz = uv * 1.4f;
           auto hsz = -sz * 0.5f;
-          *buf++ = {{{hsz.x, y + hsz.y}, sz}, {{0.0f, y}, sz}};
+          *buf++ = {{{hsz.x, y + hsz.y}, sz}, {{0.0f, v}, uv}};
           y += sz.y;
+          v += uv.y;
         }
         quad.run(*rpc, 0, (buf - base), (base - first));
 
