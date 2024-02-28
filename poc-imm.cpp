@@ -2,6 +2,7 @@
 #pragma leco add_shader "poc-imm.frag"
 #pragma leco add_shader "poc-imm.vert"
 #pragma leco add_resource "BrainF.png"
+#pragma leco add_resource "Lenna_(test_image).png"
 
 import casein;
 import dotz;
@@ -32,11 +33,14 @@ class thread : public voo::casein_thread {
 
     auto smp = vee::create_sampler(vee::linear_sampler);
     auto dpool =
-        vee::create_descriptor_pool(1, {vee::combined_image_sampler()});
+        vee::create_descriptor_pool(2, {vee::combined_image_sampler(2)});
     auto dsl = vee::create_descriptor_set_layout({vee::dsl_fragment_sampler()});
 
     hide::image spl1{dq.physical_device(), dq.queue(),
                      vee::allocate_descriptor_set(*dpool, *dsl), "BrainF.png"};
+    hide::image spl2{dq.physical_device(), dq.queue(),
+                     vee::allocate_descriptor_set(*dpool, *dsl),
+                     "Lenna_(test_image).png"};
 
     auto pl = vee::create_pipeline_layout(
         {*dsl}, {vee::vertex_push_constant_range<upc>()});
@@ -63,7 +67,7 @@ class thread : public voo::casein_thread {
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
 
-      {
+      const auto refresh = [&] {
         upc pc{sw.aspect()};
 
         auto rpc = sw.cmd_buf_render_pass_continue(scb);
@@ -75,7 +79,7 @@ class thread : public voo::casein_thread {
         auto buf = static_cast<rect *>(*m);
         const auto first = buf;
 
-        if (time.millis() < 3.0f) {
+        if (time.millis() < 3000.0f) {
           auto base = buf;
           vee::cmd_bind_descriptor_set(*rpc, *pl, 0, spl1.dset());
           *buf++ = {{-0.8f * spl1.aspect(), -0.8f},
@@ -83,12 +87,18 @@ class thread : public voo::casein_thread {
           quad.run(*rpc, 0, (buf - base), (base - first));
           // TODO: how to tween alpha and keep cmd_buf and vbuf intact?
           // TODO: lazy load image or pause until image is loaded?
-        } else if (time.millis() < 6.0f) {
-          // same, but spl2
+        } else if (time.millis() < 6000.0f) {
+          auto base = buf;
+          vee::cmd_bind_descriptor_set(*rpc, *pl, 0, spl2.dset());
+          *buf++ = {{-0.8f * spl2.aspect(), -0.8f},
+                    {1.6f * spl2.aspect(), 1.6f}};
+          quad.run(*rpc, 0, (buf - base), (base - first));
         }
-      }
+      };
 
       extent_loop(dq.queue(), sw, [&] {
+        refresh();
+
         sw.queue_one_time_submit(dq.queue(), [&](auto pcb) {
           insts.setup_copy(*pcb);
 
