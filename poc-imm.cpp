@@ -17,6 +17,10 @@ struct rect {
   dotz::vec2 pos;
   dotz::vec2 size;
 };
+struct inst {
+  rect r;
+  rect uv;
+};
 struct upc {
   float aspect;
 };
@@ -28,7 +32,7 @@ class thread : public voo::casein_thread {
     voo::device_and_queue dq{"hide-immediate", native_ptr()};
 
     voo::one_quad quad{dq.physical_device()};
-    voo::h2l_buffer insts{dq.physical_device(), max_quads * sizeof(rect)};
+    voo::h2l_buffer insts{dq.physical_device(), max_quads * sizeof(inst)};
 
     auto cpool = vee::create_command_pool(dq.queue_family());
     auto scb = vee::allocate_secondary_command_buffer(*cpool);
@@ -50,11 +54,11 @@ class thread : public voo::casein_thread {
 
     hide::text main_menu{dq.physical_device(), dq.queue(),
                          vee::allocate_descriptor_set(*dpool, *dsl)};
-    main_menu.draw("New Game");
-    main_menu.draw("Continue");
-    main_menu.draw("Options");
-    main_menu.draw("Credits");
-    main_menu.draw("Exit");
+    dotz::vec2 main_menu_szs[]{
+        main_menu.draw("New Game"), main_menu.draw("Continue"),
+        main_menu.draw("Options"),  main_menu.draw("Credits"),
+        main_menu.draw("Exit"),
+    };
 
     auto pl = vee::create_pipeline_layout(
         {*dsl}, {vee::vertex_push_constant_range<upc>()});
@@ -68,12 +72,14 @@ class thread : public voo::casein_thread {
         },
         .bindings{
             quad.vertex_input_bind(),
-            vee::vertex_input_bind_per_instance(sizeof(rect)),
+            vee::vertex_input_bind_per_instance(sizeof(inst)),
         },
         .attributes{
             quad.vertex_attribute(0),
             vee::vertex_attribute_vec2(1, 0),
             vee::vertex_attribute_vec2(1, sizeof(dotz::vec2)),
+            vee::vertex_attribute_vec2(1, 2 * sizeof(dotz::vec2)),
+            vee::vertex_attribute_vec2(1, 3 * sizeof(dotz::vec2)),
         },
     });
 
@@ -91,13 +97,13 @@ class thread : public voo::casein_thread {
         vee::cmd_bind_vertex_buffers(*rpc, 1, insts.local_buffer());
 
         voo::mapmem m{insts.host_memory()};
-        auto buf = static_cast<rect *>(*m);
+        auto buf = static_cast<inst *>(*m);
         const auto first = buf;
 
         const auto stamp = [&](auto &img, float y, dotz::vec2 sz) {
           auto base = buf;
           vee::cmd_bind_descriptor_set(*rpc, *pl, 0, img.dset());
-          *buf++ = {{-sz.x * 0.5f, y - sz.y * 0.5f}, sz};
+          *buf++ = {{{-sz.x * 0.5f, y - sz.y * 0.5f}, sz}, {{0, 0}, {1, 1}}};
           quad.run(*rpc, 0, (buf - base), (base - first));
         };
         const auto splash = [&](auto &spl, float ms) {
@@ -118,7 +124,16 @@ class thread : public voo::casein_thread {
         // main menu
         stamp(bg, 0.0f, {2.0f * sw.aspect(), 2.0f});
         stamp(logo, -0.5f, logo.size(0.6f));
-        stamp(main_menu, 0.6f, {1.3f, 1.3f});
+
+        auto base = buf;
+        vee::cmd_bind_descriptor_set(*rpc, *pl, 0, main_menu.dset());
+        float y = 0.0f;
+        for (auto sz : main_menu_szs) {
+          auto hsz = -sz * 0.5f;
+          *buf++ = {{{hsz.x, y + hsz.y}, sz}, {{0.0f, y}, sz}};
+          y += sz.y;
+        }
+        quad.run(*rpc, 0, (buf - base), (base - first));
 
         // selection
         // menu

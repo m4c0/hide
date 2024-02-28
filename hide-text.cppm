@@ -30,15 +30,16 @@ public:
 
   [[nodiscard]] constexpr auto dset() const noexcept { return m_dset; }
 
-  void draw(jute::view str) {
+  [[nodiscard]] dotz::vec2 draw(jute::view str) {
     int pen_x = 0;
 
     voo::mapmem mem{m_img.host_memory()};
     auto img = static_cast<unsigned char *>(*mem);
-    font().shape_en(str).draw(img, m_img.width(), m_img.height(), pen_x,
-                              m_pen_y);
+    font().shape_en(str).draw(img, m_img.width(), m_img.height(), &pen_x,
+                              &m_pen_y);
 
     m_pen_y += line_h;
+    return {pen_x / 1024.0f, line_h / 1024.0f};
   }
 
   void setup_copy(vee::command_buffer cb) { m_img.setup_copy(cb); }
