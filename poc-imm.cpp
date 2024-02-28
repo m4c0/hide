@@ -86,14 +86,17 @@ class thread : public voo::casein_thread {
         auto buf = static_cast<rect *>(*m);
         const auto first = buf;
 
+        const auto stamp = [&](auto &img, float y, dotz::vec2 sz) {
+          auto base = buf;
+          vee::cmd_bind_descriptor_set(*rpc, *pl, 0, img.dset());
+          *buf++ = {{-sz.x * 0.5f, y - sz.y * 0.5f}, sz};
+          quad.run(*rpc, 0, (buf - base), (base - first));
+        };
         const auto splash = [&](auto &spl, float ms) {
           if (ms > 3000.0f)
             return false;
 
-          auto base = buf;
-          vee::cmd_bind_descriptor_set(*rpc, *pl, 0, spl.dset());
-          *buf++ = {{-0.8f * spl.aspect(), -0.8f}, {1.6f * spl.aspect(), 1.6f}};
-          quad.run(*rpc, 0, (buf - base), (base - first));
+          stamp(spl, 0.0f, {1.6f * spl.aspect(), 1.6f});
           // TODO: how to tween alpha and keep cmd_buf and vbuf intact?
           // TODO: lazy load image or pause until image is loaded?
           return true;
@@ -105,16 +108,9 @@ class thread : public voo::casein_thread {
           return;
 
         // main menu
-        auto base = buf;
-        vee::cmd_bind_descriptor_set(*rpc, *pl, 0, bg.dset());
-        *buf++ = {{-1.0f * sw.aspect(), -1.0f}, {2.0f * sw.aspect(), 2.0f}};
-        quad.run(*rpc, 0, (buf - base), (base - first));
+        stamp(bg, 0.0f, {2.0f * sw.aspect(), 2.0f});
+        stamp(logo, -0.5f, {0.6f * logo.aspect(), 0.6f});
 
-        base = buf;
-        vee::cmd_bind_descriptor_set(*rpc, *pl, 0, logo.dset());
-        *buf++ = {{-0.3f * logo.aspect(), -0.8f}, {0.6f * logo.aspect(), 0.6f}};
-        quad.run(*rpc, 0, (buf - base), (base - first));
-        
         // selection
         // menu
       };
