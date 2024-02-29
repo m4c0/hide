@@ -5,10 +5,12 @@
 #pragma leco add_resource "Lenna_(test_image).png"
 #pragma leco add_resource "m3-bg.png"
 #pragma leco add_resource "m3-game_title.png"
+#pragma leco add_resource "m3-storeCounter_bar.png"
 
 import casein;
 import dotz;
 import hide;
+import jute;
 import sitime;
 import vee;
 import voo;
@@ -54,17 +56,16 @@ class thread : public voo::casein_thread {
     auto dpool =
         vee::create_descriptor_pool(16, {vee::combined_image_sampler(16)});
     auto dsl = vee::create_descriptor_set_layout({vee::dsl_fragment_sampler()});
+    const auto load_img = [&](jute::view fn) {
+      return hide::image{dq.physical_device(), dq.queue(),
+                         vee::allocate_descriptor_set(*dpool, *dsl), fn};
+    };
 
-    hide::image spl1{dq.physical_device(), dq.queue(),
-                     vee::allocate_descriptor_set(*dpool, *dsl), "BrainF.png"};
-    hide::image spl2{dq.physical_device(), dq.queue(),
-                     vee::allocate_descriptor_set(*dpool, *dsl),
-                     "Lenna_(test_image).png"};
-    hide::image bg{dq.physical_device(), dq.queue(),
-                   vee::allocate_descriptor_set(*dpool, *dsl), "m3-bg.png"};
-    hide::image logo{dq.physical_device(), dq.queue(),
-                     vee::allocate_descriptor_set(*dpool, *dsl),
-                     "m3-game_title.png"};
+    auto spl1 = load_img("BrainF.png");
+    auto spl2 = load_img("Lenna_(test_image).png");
+    auto bg = load_img("m3-bg.png");
+    auto logo = load_img("m3-game_title.png");
+    auto bar = load_img("m3-storeCounter_bar.png");
 
     hide::text mmtxt{dq.physical_device(), dq.queue(),
                      vee::allocate_descriptor_set(*dpool, *dsl)};
