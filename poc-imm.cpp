@@ -152,14 +152,17 @@ class thread : public voo::casein_thread {
         };
 #endif
         const auto main_menu = [&] {
-          m_sel_max = sizeof(mmtxt_szs) / sizeof(mmtxt_szs[0]);
-
           auto &ms = bg_dt;
           ms += dt;
 
           float a = ms / 1000.0f;
           if (a > 1.0f)
             a = 1.0f;
+
+          if (a == 1.0f)
+            m_sel_max = sizeof(mmtxt_szs) / sizeof(mmtxt_szs[0]);
+          else
+            m_sel_max = 0;
 
           stamp(bg, 0.0f, {2.0f * sw.aspect(), 2.0f}, a);
           stamp(logo, -0.5f, logo.size(0.6f), a);
