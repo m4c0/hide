@@ -165,15 +165,50 @@ class thread : public voo::casein_thread {
           stamp(logo, -0.5f, logo.size(0.6f), a);
 
           const auto bar = [&](rect r) {
-            dotz::vec2 bsz{0.2f, 0.05f};
+            constexpr const dotz::vec2 bsz{0.05f, -0.05f};
+            constexpr const auto mgn = 0.05f;
+
+            const auto xl = r.pos.x - bsz.x * 0.5f - mgn;
+            const auto xm = xl + mgn;
+            const auto xr = r.pos.x + r.size.x + bsz.x * 0.5f;
+            const auto xw = xr - xm;
+
+            const auto yt = r.pos.y - bsz.y * 0.5f - mgn;
+            const auto ym = yt + mgn;
+            const auto yb = r.pos.y + r.size.y + bsz.y * 0.5f;
+            const auto yh = yb - ym;
+
+            const dotz::vec4 m{1.0f, 1.0f, 1.0f, a};
 
             auto base = buf;
             vee::cmd_bind_descriptor_set(*rpc, *pl, 0, bar_bg.dset());
-            *buf++ = {
-                .r = {r.pos - bsz * 0.5f, r.size + bsz},
-                .uv = {{0.25f, 0.25f}, {0.75f, 0.75f}},
-                .mult = {1.0f, 1.0f, 1.0f, a},
-            };
+            *buf++ = {.r = {{xl, yt}, {mgn}},
+                      .uv = {{0.0f, 0.0f}, {0.25f}},
+                      .mult = m};
+            *buf++ = {.r = {{xl, ym}, {mgn, yh}},
+                      .uv = {{0.0f, 0.25f}, {0.25f, 0.5f}},
+                      .mult = m};
+            *buf++ = {.r = {{xl, yb}, {mgn}},
+                      .uv = {{0.0f, 0.75f}, {0.25f}},
+                      .mult = m};
+            *buf++ = {.r = {{xm, yt}, {xw, mgn}},
+                      .uv = {{0.25f, 0.0f}, {0.5f, 0.25f}},
+                      .mult = m};
+            *buf++ = {.r = {{xm, ym}, {xw, yh}},
+                      .uv = {{0.25f, 0.25f}, {0.5f, 0.5f}},
+                      .mult = m};
+            *buf++ = {.r = {{xm, yb}, {xw, mgn}},
+                      .uv = {{0.25f, 0.75f}, {0.5f, 0.25f}},
+                      .mult = m};
+            *buf++ = {.r = {{xr, yt}, {mgn}},
+                      .uv = {{0.75f, 0.0f}, {0.25f}},
+                      .mult = m};
+            *buf++ = {.r = {{xr, ym}, {mgn, yh}},
+                      .uv = {{0.75f, 0.25f}, {0.25f, 0.5f}},
+                      .mult = m};
+            *buf++ = {.r = {{xr, yb}, {mgn}},
+                      .uv = {{0.75f, 0.75f}, {0.25f}},
+                      .mult = m};
             quad.run(*rpc, 0, (buf - base), (base - first));
           };
           {
