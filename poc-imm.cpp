@@ -7,6 +7,8 @@
 #pragma leco add_resource "m3-game_title.png"
 #pragma leco add_resource "m3-storeCounter_bar.png"
 
+#define SHOW_SPLASH 1
+
 import casein;
 import dotz;
 import hide;
@@ -99,8 +101,10 @@ class thread : public voo::casein_thread {
     });
 
     sitime::stopwatch time{};
+#if SHOW_SPLASH
     float spl1_dt{};
     float spl2_dt{};
+#endif
     float bg_dt{};
 
     while (!interrupted()) {
@@ -132,6 +136,7 @@ class thread : public voo::casein_thread {
           };
           quad.run(*rpc, 0, (buf - base), (base - first));
         };
+#if SHOW_SPLASH
         const auto splash = [&](auto &spl, float &ms) {
           ms += dt;
           if (ms > 3000.0f)
@@ -145,6 +150,7 @@ class thread : public voo::casein_thread {
           // TODO: lazy load image or pause until image is loaded?
           return true;
         };
+#endif
         const auto main_menu = [&] {
           m_sel_max = sizeof(mmtxt_szs) / sizeof(mmtxt_szs[0]);
 
@@ -165,7 +171,7 @@ class thread : public voo::casein_thread {
             vee::cmd_bind_descriptor_set(*rpc, *pl, 0, bar_bg.dset());
             *buf++ = {
                 .r = {r.pos - bsz * 0.5f, r.size + bsz},
-                .uv = {{0, 0}, {1, 1}},
+                .uv = {{0.25f, 0.25f}, {0.75f, 0.75f}},
                 .mult = {1.0f, 1.0f, 1.0f, a},
             };
             quad.run(*rpc, 0, (buf - base), (base - first));
@@ -205,10 +211,12 @@ class thread : public voo::casein_thread {
           quad.run(*rpc, 0, (buf - base), (base - first));
         };
 
+#if SHOW_SPLASH
         if (splash(spl1, spl1_dt))
           return;
         if (splash(spl2, spl2_dt))
           return;
+#endif
 
         main_menu();
       };
