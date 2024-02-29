@@ -65,7 +65,7 @@ class thread : public voo::casein_thread {
     auto spl2 = load_img("Lenna_(test_image).png");
     auto bg = load_img("m3-bg.png");
     auto logo = load_img("m3-game_title.png");
-    auto bar = load_img("m3-storeCounter_bar.png");
+    auto bar_bg = load_img("m3-storeCounter_bar.png");
 
     hide::text mmtxt{dq.physical_device(), dq.queue(),
                      vee::allocate_descriptor_set(*dpool, *dsl)};
@@ -158,24 +158,30 @@ class thread : public voo::casein_thread {
           stamp(bg, 0.0f, {2.0f * sw.aspect(), 2.0f}, a);
           stamp(logo, -0.5f, logo.size(0.6f), a);
 
-          {
+          const auto bar = [&](rect r) {
+            dotz::vec2 bsz{0.2f, 0.05f};
+
             auto base = buf;
-            vee::cmd_bind_descriptor_set(*rpc, *pl, 0, bar.dset());
+            vee::cmd_bind_descriptor_set(*rpc, *pl, 0, bar_bg.dset());
+            *buf++ = {
+                .r = {r.pos - bsz * 0.5f, r.size + bsz},
+                .uv = {{0, 0}, {1, 1}},
+                .mult = {1.0f, 1.0f, 1.0f, a},
+            };
+            quad.run(*rpc, 0, (buf - base), (base - first));
+          };
+          {
             float y = 0.0f;
             unsigned i = 0;
             for (auto uv : mmtxt_szs) {
               auto sz = uv * 1.4f;
               auto hsz = -sz * 0.5f;
-              if (i++ == m_sel)
-                *buf++ = {
-                    .r = {{hsz.x - 0.1f, y + hsz.y - 0.025f},
-                          sz + dotz::vec2{0.2f, 0.05f}},
-                    .uv = {{0, 0}, {1, 1}},
-                    .mult = {1.0f, 1.0f, 1.0f, a},
-                };
+              if (i++ == m_sel) {
+                bar({{hsz.x, y + hsz.y}, sz});
+                break;
+              }
               y += sz.y;
             }
-            quad.run(*rpc, 0, (buf - base), (base - first));
           }
 
           auto base = buf;
