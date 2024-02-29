@@ -127,6 +127,13 @@ class thread : public voo::casein_thread {
           // TODO: lazy load image or pause until image is loaded?
           return true;
         };
+        const auto back = [&](float ms) {
+          float a = ms / 1000.0f;
+          if (a > 1.0f)
+            a = 1.0f;
+
+          stamp(bg, 0.0f, {2.0f * sw.aspect(), 2.0f}, a);
+        };
 
         if (splash(spl1, time.millis()))
           return;
@@ -134,7 +141,7 @@ class thread : public voo::casein_thread {
           return;
 
         // main menu
-        stamp(bg, 0.0f, {2.0f * sw.aspect(), 2.0f});
+        back(time.millis() - 6000.0f);
         stamp(logo, -0.5f, logo.size(0.6f));
 
         auto base = buf;
