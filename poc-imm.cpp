@@ -88,12 +88,18 @@ class thread : public voo::casein_thread {
     });
 
     sitime::stopwatch time{};
+    float spl1_dt{};
+    float spl2_dt{};
+    float bg_dt{};
 
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
 
       const auto refresh = [&] {
         upc pc{sw.aspect()};
+
+        float dt = time.millis();
+        time = {};
 
         auto rpc = sw.cmd_buf_render_pass_continue(scb);
         vee::cmd_bind_gr_pipeline(*rpc, *gp);
@@ -115,7 +121,8 @@ class thread : public voo::casein_thread {
           };
           quad.run(*rpc, 0, (buf - base), (base - first));
         };
-        const auto splash = [&](auto &spl, float ms) {
+        const auto splash = [&](auto &spl, float &ms) {
+          ms += dt;
           if (ms > 3000.0f)
             return false;
 
@@ -127,7 +134,10 @@ class thread : public voo::casein_thread {
           // TODO: lazy load image or pause until image is loaded?
           return true;
         };
-        const auto back = [&](float ms) {
+        const auto back = [&] {
+          auto &ms = bg_dt;
+          ms += dt;
+
           float a = ms / 1000.0f;
           if (a > 1.0f)
             a = 1.0f;
@@ -135,13 +145,13 @@ class thread : public voo::casein_thread {
           stamp(bg, 0.0f, {2.0f * sw.aspect(), 2.0f}, a);
         };
 
-        if (splash(spl1, time.millis()))
+        if (splash(spl1, spl1_dt))
           return;
-        if (splash(spl2, time.millis() - 3000.0f))
+        if (splash(spl2, spl2_dt))
           return;
 
         // main menu
-        back(time.millis() - 6000.0f);
+        back();
         stamp(logo, -0.5f, logo.size(0.6f));
 
         auto base = buf;
