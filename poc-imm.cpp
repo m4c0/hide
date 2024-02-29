@@ -55,12 +55,11 @@ class thread : public voo::casein_thread {
                      vee::allocate_descriptor_set(*dpool, *dsl),
                      "m3-game_title.png"};
 
-    hide::text main_menu{dq.physical_device(), dq.queue(),
-                         vee::allocate_descriptor_set(*dpool, *dsl)};
-    dotz::vec2 main_menu_szs[]{
-        main_menu.draw("New Game"), main_menu.draw("Continue"),
-        main_menu.draw("Options"),  main_menu.draw("Credits"),
-        main_menu.draw("Exit"),
+    hide::text mmtxt{dq.physical_device(), dq.queue(),
+                     vee::allocate_descriptor_set(*dpool, *dsl)};
+    dotz::vec2 mmtxt_szs[]{
+        mmtxt.draw("New Game"), mmtxt.draw("Continue"), mmtxt.draw("Options"),
+        mmtxt.draw("Credits"),  mmtxt.draw("Exit"),
     };
 
     auto pl = vee::create_pipeline_layout(
@@ -134,7 +133,7 @@ class thread : public voo::casein_thread {
           // TODO: lazy load image or pause until image is loaded?
           return true;
         };
-        const auto back = [&] {
+        const auto main_menu = [&] {
           auto &ms = bg_dt;
           ms += dt;
 
@@ -143,6 +142,24 @@ class thread : public voo::casein_thread {
             a = 1.0f;
 
           stamp(bg, 0.0f, {2.0f * sw.aspect(), 2.0f}, a);
+          stamp(logo, -0.5f, logo.size(0.6f), a);
+
+          auto base = buf;
+          vee::cmd_bind_descriptor_set(*rpc, *pl, 0, mmtxt.dset());
+          float y = 0.0f;
+          float v = 0.0f;
+          for (auto uv : mmtxt_szs) {
+            auto sz = uv * 1.4f;
+            auto hsz = -sz * 0.5f;
+            *buf++ = {
+                .r = {{hsz.x, y + hsz.y}, sz},
+                .uv = {{0.0f, v}, uv},
+                .mult = {0.5f, 0.2f, 0.1f, a},
+            };
+            y += sz.y;
+            v += uv.y;
+          }
+          quad.run(*rpc, 0, (buf - base), (base - first));
         };
 
         if (splash(spl1, spl1_dt))
@@ -150,36 +167,14 @@ class thread : public voo::casein_thread {
         if (splash(spl2, spl2_dt))
           return;
 
-        // main menu
-        back();
-        stamp(logo, -0.5f, logo.size(0.6f));
-
-        auto base = buf;
-        vee::cmd_bind_descriptor_set(*rpc, *pl, 0, main_menu.dset());
-        float y = 0.0f;
-        float v = 0.0f;
-        for (auto uv : main_menu_szs) {
-          auto sz = uv * 1.4f;
-          auto hsz = -sz * 0.5f;
-          *buf++ = {
-              .r = {{hsz.x, y + hsz.y}, sz},
-              .uv = {{0.0f, v}, uv},
-              .mult = {0.5f, 0.2f, 0.1f, 1.0f},
-          };
-          y += sz.y;
-          v += uv.y;
-        }
-        quad.run(*rpc, 0, (buf - base), (base - first));
-
-        // selection
-        // menu
+        main_menu();
       };
 
       extent_loop(dq.queue(), sw, [&] {
         refresh();
 
         sw.queue_one_time_submit(dq.queue(), [&](auto pcb) {
-          main_menu.setup_copy(*pcb);
+          mmtxt.setup_copy(*pcb);
           insts.setup_copy(*pcb);
 
           auto rp = sw.cmd_render_pass({
