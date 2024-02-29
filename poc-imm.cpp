@@ -91,6 +91,8 @@ class thread : public voo::casein_thread {
     float spl2_dt{};
     float bg_dt{};
 
+    unsigned mmopt{};
+
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
 
@@ -148,13 +150,16 @@ class thread : public voo::casein_thread {
           vee::cmd_bind_descriptor_set(*rpc, *pl, 0, mmtxt.dset());
           float y = 0.0f;
           float v = 0.0f;
+          unsigned i = 0;
           for (auto uv : mmtxt_szs) {
             auto sz = uv * 1.4f;
             auto hsz = -sz * 0.5f;
+            auto colour = i++ == mmopt ? dotz::vec4{0.0f, 0.0f, 0.0f, a}
+                                       : dotz::vec4{0.5f, 0.2f, 0.1f, a};
             *buf++ = {
                 .r = {{hsz.x, y + hsz.y}, sz},
                 .uv = {{0.0f, v}, uv},
-                .mult = {0.5f, 0.2f, 0.1f, a},
+                .mult = colour,
             };
             y += sz.y;
             v += uv.y;
