@@ -31,6 +31,17 @@ struct upc {
 static constexpr const auto max_quads = 10240;
 
 class thread : public voo::casein_thread {
+  int m_sel{};
+  int m_sel_max{};
+
+  void key_down(const casein::events::key_down &e) override {
+    if (m_sel_max == 0)
+      return;
+    if (*e == casein::K_DOWN)
+      m_sel = (m_sel + 1) % m_sel_max;
+    if (*e == casein::K_UP)
+      m_sel = (m_sel_max + m_sel - 1) % m_sel_max;
+  }
   void run() override {
     voo::device_and_queue dq{"hide-immediate", native_ptr()};
 
@@ -91,8 +102,6 @@ class thread : public voo::casein_thread {
     float spl2_dt{};
     float bg_dt{};
 
-    unsigned mmopt{};
-
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
 
@@ -136,6 +145,8 @@ class thread : public voo::casein_thread {
           return true;
         };
         const auto main_menu = [&] {
+          m_sel_max = sizeof(mmtxt_szs) / sizeof(mmtxt_szs[0]);
+
           auto &ms = bg_dt;
           ms += dt;
 
@@ -154,7 +165,7 @@ class thread : public voo::casein_thread {
           for (auto uv : mmtxt_szs) {
             auto sz = uv * 1.4f;
             auto hsz = -sz * 0.5f;
-            auto colour = i++ == mmopt ? dotz::vec4{0.0f, 0.0f, 0.0f, a}
+            auto colour = i++ == m_sel ? dotz::vec4{0.0f, 0.0f, 0.0f, a}
                                        : dotz::vec4{0.5f, 0.2f, 0.1f, a};
             *buf++ = {
                 .r = {{hsz.x, y + hsz.y}, sz},
