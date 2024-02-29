@@ -158,6 +158,26 @@ class thread : public voo::casein_thread {
           stamp(bg, 0.0f, {2.0f * sw.aspect(), 2.0f}, a);
           stamp(logo, -0.5f, logo.size(0.6f), a);
 
+          {
+            auto base = buf;
+            vee::cmd_bind_descriptor_set(*rpc, *pl, 0, bar.dset());
+            float y = 0.0f;
+            unsigned i = 0;
+            for (auto uv : mmtxt_szs) {
+              auto sz = uv * 1.4f;
+              auto hsz = -sz * 0.5f;
+              if (i++ == m_sel)
+                *buf++ = {
+                    .r = {{hsz.x - 0.1f, y + hsz.y - 0.025f},
+                          sz + dotz::vec2{0.2f, 0.05f}},
+                    .uv = {{0, 0}, {1, 1}},
+                    .mult = {1.0f, 1.0f, 1.0f, a},
+                };
+              y += sz.y;
+            }
+            quad.run(*rpc, 0, (buf - base), (base - first));
+          }
+
           auto base = buf;
           vee::cmd_bind_descriptor_set(*rpc, *pl, 0, mmtxt.dset());
           float y = 0.0f;
