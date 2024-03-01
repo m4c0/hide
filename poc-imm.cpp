@@ -32,7 +32,106 @@ struct upc {
   float aspect;
 };
 
-static constexpr const auto max_quads = 10240;
+class pipeline {
+  static constexpr const auto max_quads = 10240;
+
+  voo::one_quad m_quad;
+  voo::h2l_buffer m_insts;
+
+  vee::command_pool m_cpool;
+  vee::command_buffer m_scb;
+
+  vee::render_pass::type m_rp;
+  vee::descriptor_set_layout m_dsl;
+  vee::pipeline_layout m_pl;
+  vee::gr_pipeline m_gp;
+
+public:
+  pipeline(vee::physical_device pd, unsigned qf, vee::render_pass::type rp)
+      : m_quad{pd}
+      , m_insts{pd, max_quads * sizeof(inst)}
+      , m_cpool{vee::create_command_pool(qf)}
+      , m_scb{vee::allocate_secondary_command_buffer(*m_cpool)}
+      , m_rp{rp}
+      , m_dsl{vee::create_descriptor_set_layout({vee::dsl_fragment_sampler()})}
+      , m_pl{vee::create_pipeline_layout(
+            *m_dsl, vee::vertex_push_constant_range<upc>())}
+      , m_gp{vee::create_graphics_pipeline({
+            .pipeline_layout = *m_pl,
+            .render_pass = rp,
+            .depth_test = false,
+            .shaders{
+                voo::shader("poc-imm.vert.spv").pipeline_vert_stage(),
+                voo::shader("poc-imm.frag.spv").pipeline_frag_stage(),
+            },
+            .bindings{
+                m_quad.vertex_input_bind(),
+                vee::vertex_input_bind_per_instance(sizeof(inst)),
+            },
+            .attributes{
+                m_quad.vertex_attribute(0),
+                vee::vertex_attribute_vec2(1, 0),
+                vee::vertex_attribute_vec2(1, sizeof(dotz::vec2)),
+                vee::vertex_attribute_vec2(1, 2 * sizeof(dotz::vec2)),
+                vee::vertex_attribute_vec2(1, 3 * sizeof(dotz::vec2)),
+                vee::vertex_attribute_vec4(1, 4 * sizeof(dotz::vec2)),
+            },
+        })} {}
+
+  [[nodiscard]] constexpr const auto descriptor_set_layout() const noexcept {
+    return *m_dsl;
+  }
+  [[nodiscard]] constexpr const auto host_memory() const noexcept {
+    return m_insts.host_memory();
+  }
+  [[nodiscard]] constexpr const auto pipeline_layout() const noexcept {
+    return *m_pl;
+  }
+  [[nodiscard]] constexpr const auto &one_quad() const noexcept {
+    return m_quad;
+  }
+  [[nodiscard]] constexpr const auto secondary_command_buffer() const noexcept {
+    return m_scb;
+  }
+
+  [[nodiscard]] auto cmd_buf_render_pass_continue(vee::extent ext) const {
+    upc pc{static_cast<float>(ext.width) / static_cast<float>(ext.height)};
+
+    voo::cmd_buf_render_pass_continue rpc{m_scb, m_rp};
+    vee::cmd_set_viewport(*rpc, ext);
+    vee::cmd_set_scissor(*rpc, ext);
+    vee::cmd_bind_gr_pipeline(*rpc, *m_gp);
+    vee::cmd_push_vertex_constants(*rpc, *m_pl, &pc);
+    vee::cmd_bind_vertex_buffers(*rpc, 1, m_insts.local_buffer());
+    return rpc;
+  }
+
+  void setup_copy(vee::command_buffer cb) { m_insts.setup_copy(cb); }
+};
+class ppl_render_pass {
+  const pipeline *m_ppl;
+  voo::cmd_buf_render_pass_continue m_rpc;
+  voo::mapmem m_mem;
+  inst *m_buf;
+  inst *m_first;
+
+public:
+  ppl_render_pass(const pipeline *ppl, vee::extent ext)
+      : m_ppl{ppl}
+      , m_rpc{ppl->cmd_buf_render_pass_continue(ext)}
+      , m_mem{ppl->host_memory()}
+      , m_buf{static_cast<inst *>(*m_mem)}
+      , m_first{m_buf} {}
+
+  void run(vee::descriptor_set dset, auto &&fn) {
+    auto base = m_buf;
+    fn(m_buf);
+    if (m_buf > base) {
+      vee::cmd_bind_descriptor_set(*m_rpc, m_ppl->pipeline_layout(), 0, dset);
+      m_ppl->one_quad().run(*m_rpc, 0, (m_buf - base), (base - m_first));
+    }
+  }
+};
 
 class thread : public voo::casein_thread {
   int m_sel{};
@@ -49,18 +148,14 @@ class thread : public voo::casein_thread {
   void run() override {
     voo::device_and_queue dq{"hide-immediate", native_ptr()};
 
-    voo::one_quad quad{dq.physical_device()};
-    voo::h2l_buffer insts{dq.physical_device(), max_quads * sizeof(inst)};
+    pipeline ppl{dq.physical_device(), dq.queue_family(), dq.render_pass()};
 
-    auto cpool = vee::create_command_pool(dq.queue_family());
-    auto scb = vee::allocate_secondary_command_buffer(*cpool);
-
+    auto dsl = ppl.descriptor_set_layout();
     auto dpool =
         vee::create_descriptor_pool(16, {vee::combined_image_sampler(16)});
-    auto dsl = vee::create_descriptor_set_layout({vee::dsl_fragment_sampler()});
     const auto load_img = [&](jute::view fn) {
       return hide::image{dq.physical_device(), dq.queue(),
-                         vee::allocate_descriptor_set(*dpool, *dsl), fn};
+                         vee::allocate_descriptor_set(*dpool, dsl), fn};
     };
 
     auto spl1 = load_img("BrainF.png");
@@ -70,35 +165,11 @@ class thread : public voo::casein_thread {
     auto bar_bg = load_img("m3-storeCounter_bar.png");
 
     hide::text mmtxt{dq.physical_device(), dq.queue(),
-                     vee::allocate_descriptor_set(*dpool, *dsl)};
+                     vee::allocate_descriptor_set(*dpool, dsl)};
     dotz::vec2 mmtxt_szs[]{
         mmtxt.draw("New Game"), mmtxt.draw("Continue"), mmtxt.draw("Options"),
         mmtxt.draw("Credits"),  mmtxt.draw("Exit"),
     };
-
-    auto pl = vee::create_pipeline_layout(
-        {*dsl}, {vee::vertex_push_constant_range<upc>()});
-    auto gp = vee::create_graphics_pipeline({
-        .pipeline_layout = *pl,
-        .render_pass = dq.render_pass(),
-        .depth_test = false,
-        .shaders{
-            voo::shader("poc-imm.vert.spv").pipeline_vert_stage(),
-            voo::shader("poc-imm.frag.spv").pipeline_frag_stage(),
-        },
-        .bindings{
-            quad.vertex_input_bind(),
-            vee::vertex_input_bind_per_instance(sizeof(inst)),
-        },
-        .attributes{
-            quad.vertex_attribute(0),
-            vee::vertex_attribute_vec2(1, 0),
-            vee::vertex_attribute_vec2(1, sizeof(dotz::vec2)),
-            vee::vertex_attribute_vec2(1, 2 * sizeof(dotz::vec2)),
-            vee::vertex_attribute_vec2(1, 3 * sizeof(dotz::vec2)),
-            vee::vertex_attribute_vec4(1, 4 * sizeof(dotz::vec2)),
-        },
-    });
 
     sitime::stopwatch time{};
 #if SHOW_SPLASH
@@ -111,32 +182,20 @@ class thread : public voo::casein_thread {
       voo::swapchain_and_stuff sw{dq};
 
       const auto refresh = [&] {
-        upc pc{sw.aspect()};
-
         float dt = time.millis();
         time = {};
 
-        voo::cmd_buf_render_pass_continue rpc{scb, dq.render_pass()};
-        vee::cmd_set_viewport(*rpc, sw.extent());
-        vee::cmd_set_scissor(*rpc, sw.extent());
-        vee::cmd_bind_gr_pipeline(*rpc, *gp);
-        vee::cmd_push_vertex_constants(*rpc, *pl, &pc);
-        vee::cmd_bind_vertex_buffers(*rpc, 1, insts.local_buffer());
+        ppl_render_pass rpc{&ppl, sw.extent()};
 
-        voo::mapmem m{insts.host_memory()};
-        auto buf = static_cast<inst *>(*m);
-        const auto first = buf;
-
-        const auto stamp = [&](auto &img, float y, dotz::vec2 sz,
-                               float a = 1.0f) {
-          auto base = buf;
-          vee::cmd_bind_descriptor_set(*rpc, *pl, 0, img.dset());
-          *buf++ = {
-              .r = {{-sz.x * 0.5f, y - sz.y * 0.5f}, sz},
-              .uv = {{0, 0}, {1, 1}},
-              .mult = {1.0f, 1.0f, 1.0f, a},
-          };
-          quad.run(*rpc, 0, (buf - base), (base - first));
+        const auto stamp = [&rpc](auto &img, float y, dotz::vec2 sz,
+                                  float a = 1.0f) {
+          rpc.run(img.dset(), [&](auto &buf) {
+            *buf++ = {
+                .r = {{-sz.x * 0.5f, y - sz.y * 0.5f}, sz},
+                .uv = {{0, 0}, {1, 1}},
+                .mult = {1.0f, 1.0f, 1.0f, a},
+            };
+          });
         };
 #if SHOW_SPLASH
         const auto splash = [&](auto &spl, float &ms) {
@@ -192,35 +251,35 @@ class thread : public voo::casein_thread {
             constexpr const auto vb = 1.0f - vt;
             constexpr const auto vh = vb - vt;
 
-            auto base = buf;
-            vee::cmd_bind_descriptor_set(*rpc, *pl, 0, bar_bg.dset());
-            *buf++ = {.r = {{xl, yt}, {mgn}},
-                      .uv = {{0.0f, 0.0f}, {ul, vt}},
-                      .mult = m};
-            *buf++ = {.r = {{xl, ym}, {mgn, yh}},
-                      .uv = {{0.0f, vt}, {ul, vh}},
-                      .mult = m};
-            *buf++ = {.r = {{xl, yb}, {mgn}},
-                      .uv = {{0.0f, vb}, {ul, vt}},
-                      .mult = m};
-            *buf++ = {.r = {{xm, yt}, {xw, mgn}},
-                      .uv = {{ul, 0.0f}, {uw, vt}},
-                      .mult = m};
-            *buf++ = {.r = {{xm, ym}, {xw, yh}},
-                      .uv = {{ul, vt}, {uw, vh}},
-                      .mult = m};
-            *buf++ = {.r = {{xm, yb}, {xw, mgn}},
-                      .uv = {{ul, vb}, {uw, vt}},
-                      .mult = m};
-            *buf++ = {.r = {{xr, yt}, {mgn}},
-                      .uv = {{ur, 0.0f}, {ul, vt}},
-                      .mult = m};
-            *buf++ = {.r = {{xr, ym}, {mgn, yh}},
-                      .uv = {{ur, vt}, {ul, vh}},
-                      .mult = m};
-            *buf++ = {
-                .r = {{xr, yb}, {mgn}}, .uv = {{ur, vb}, {ul, vt}}, .mult = m};
-            quad.run(*rpc, 0, (buf - base), (base - first));
+            rpc.run(bar_bg.dset(), [&](auto &buf) {
+              *buf++ = {.r = {{xl, yt}, {mgn}},
+                        .uv = {{0.0f, 0.0f}, {ul, vt}},
+                        .mult = m};
+              *buf++ = {.r = {{xl, ym}, {mgn, yh}},
+                        .uv = {{0.0f, vt}, {ul, vh}},
+                        .mult = m};
+              *buf++ = {.r = {{xl, yb}, {mgn}},
+                        .uv = {{0.0f, vb}, {ul, vt}},
+                        .mult = m};
+              *buf++ = {.r = {{xm, yt}, {xw, mgn}},
+                        .uv = {{ul, 0.0f}, {uw, vt}},
+                        .mult = m};
+              *buf++ = {.r = {{xm, ym}, {xw, yh}},
+                        .uv = {{ul, vt}, {uw, vh}},
+                        .mult = m};
+              *buf++ = {.r = {{xm, yb}, {xw, mgn}},
+                        .uv = {{ul, vb}, {uw, vt}},
+                        .mult = m};
+              *buf++ = {.r = {{xr, yt}, {mgn}},
+                        .uv = {{ur, 0.0f}, {ul, vt}},
+                        .mult = m};
+              *buf++ = {.r = {{xr, ym}, {mgn, yh}},
+                        .uv = {{ur, vt}, {ul, vh}},
+                        .mult = m};
+              *buf++ = {.r = {{xr, yb}, {mgn}},
+                        .uv = {{ur, vb}, {ul, vt}},
+                        .mult = m};
+            });
           };
           {
             float y = 0.0f;
@@ -236,25 +295,25 @@ class thread : public voo::casein_thread {
             }
           }
 
-          auto base = buf;
-          vee::cmd_bind_descriptor_set(*rpc, *pl, 0, mmtxt.dset());
-          float y = 0.0f;
-          float v = 0.0f;
-          unsigned i = 0;
-          for (auto uv : mmtxt_szs) {
-            auto sz = uv * 1.4f;
-            auto hsz = -sz * 0.5f;
-            auto colour = i++ == m_sel ? dotz::vec4{0.0f, 0.0f, 0.0f, a}
-                                       : dotz::vec4{0.5f, 0.2f, 0.1f, a};
-            *buf++ = {
-                .r = {{hsz.x, y + hsz.y}, sz},
-                .uv = {{0.0f, v}, uv},
-                .mult = colour,
-            };
-            y += sz.y;
-            v += uv.y;
-          }
-          quad.run(*rpc, 0, (buf - base), (base - first));
+          rpc.run(mmtxt.dset(), [&](auto &buf) {
+            float y = 0.0f;
+            float v = 0.0f;
+            unsigned i = 0;
+            for (auto uv : mmtxt_szs) {
+              auto sz = uv * 1.4f;
+              auto hsz = -sz * 0.5f;
+              auto colour = i++ == m_sel ? dotz::vec4{0.0f, 0.0f, 0.0f, a}
+                                         : dotz::vec4{0.5f, 0.2f, 0.1f, a};
+              *buf++ = {
+                  .r = {{hsz.x, y + hsz.y}, sz},
+                  .uv = {{0.0f, v}, uv},
+                  .mult = colour,
+              };
+              y += sz.y;
+              v += uv.y;
+            }
+          });
+          return 0;
         };
 
 #if SHOW_SPLASH
@@ -264,7 +323,10 @@ class thread : public voo::casein_thread {
           return;
 #endif
 
-        main_menu();
+        switch (main_menu()) {
+        default:
+          break;
+        }
       };
 
       extent_loop(dq.queue(), sw, [&] {
@@ -272,14 +334,14 @@ class thread : public voo::casein_thread {
 
         sw.queue_one_time_submit(dq.queue(), [&](auto pcb) {
           mmtxt.setup_copy(*pcb);
-          insts.setup_copy(*pcb);
+          ppl.setup_copy(*pcb);
 
           auto rp = sw.cmd_render_pass({
               .command_buffer = *pcb,
               .clear_color = {},
               .use_secondary_cmd_buf = true,
           });
-          vee::cmd_execute_command(*pcb, scb);
+          vee::cmd_execute_command(*pcb, ppl.secondary_command_buffer());
         });
       });
     }
