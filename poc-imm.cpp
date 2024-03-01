@@ -14,6 +14,7 @@ import dotz;
 import hide;
 import jute;
 import sitime;
+import traits;
 import vee;
 import voo;
 
@@ -143,6 +144,28 @@ public:
   }
 };
 
+class splash {
+  hide::image m_img;
+  float m_timer{};
+
+public:
+  explicit splash(hide::image img) : m_img{traits::move(img)} {}
+
+  bool operator()(ppl_render_pass *rpc, float dt) {
+    m_timer += dt;
+    if (m_timer > 3000.0f)
+      return false;
+
+    float s = m_timer / 1000.0f;
+    float a = sinf(s * 3.14 / 3.0);
+
+    rpc->stamp(m_img.dset(), 0.0f, m_img.size(1.6f), a);
+    // TODO: how to tween alpha and keep cmd_buf and vbuf intact?
+    // TODO: lazy load image or pause until image is loaded?
+    return true;
+  }
+};
+
 class thread : public voo::casein_thread {
   int m_sel{};
   int m_sel_max{};
@@ -168,8 +191,8 @@ class thread : public voo::casein_thread {
                          vee::allocate_descriptor_set(*dpool, dsl), fn};
     };
 
-    auto spl1 = load_img("BrainF.png");
-    auto spl2 = load_img("Lenna_(test_image).png");
+    splash spl1{load_img("BrainF.png")};
+    splash spl2{load_img("Lenna_(test_image).png")};
     auto bg = load_img("m3-bg.png");
     auto logo = load_img("m3-game_title.png");
     auto bar_bg = load_img("m3-storeCounter_bar.png");
@@ -182,10 +205,6 @@ class thread : public voo::casein_thread {
     };
 
     sitime::stopwatch time{};
-#if SHOW_SPLASH
-    float spl1_dt{};
-    float spl2_dt{};
-#endif
     float bg_dt{};
 
     while (!interrupted()) {
@@ -197,21 +216,6 @@ class thread : public voo::casein_thread {
 
         ppl_render_pass rpc{&ppl, sw.extent()};
 
-#if SHOW_SPLASH
-        const auto splash = [&rpc, dt](auto &spl, float &ms) {
-          ms += dt;
-          if (ms > 3000.0f)
-            return false;
-
-          float s = ms / 1000.0f;
-          float a = sinf(s * 3.14 / 3.0);
-
-          rpc.stamp(spl.dset(), 0.0f, spl.size(1.6f), a);
-          // TODO: how to tween alpha and keep cmd_buf and vbuf intact?
-          // TODO: lazy load image or pause until image is loaded?
-          return true;
-        };
-#endif
         const auto main_menu = [&] {
           auto &ms = bg_dt;
           ms += dt;
@@ -317,9 +321,9 @@ class thread : public voo::casein_thread {
         };
 
 #if SHOW_SPLASH
-        if (splash(spl1, spl1_dt))
+        if (spl1(&rpc, dt))
           return;
-        if (splash(spl2, spl2_dt))
+        if (spl2(&rpc, dt))
           return;
 #endif
 
