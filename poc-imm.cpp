@@ -131,6 +131,16 @@ public:
       m_ppl->one_quad().run(*m_rpc, 0, (m_buf - base), (base - m_first));
     }
   }
+
+  void stamp(vee::descriptor_set dset, float y, dotz::vec2 sz, float a = 1.0f) {
+    run(dset, [&](auto &buf) {
+      *buf++ = {
+          .r = {{-sz.x * 0.5f, y - sz.y * 0.5f}, sz},
+          .uv = {{0, 0}, {1, 1}},
+          .mult = {1.0f, 1.0f, 1.0f, a},
+      };
+    });
+  }
 };
 
 class thread : public voo::casein_thread {
@@ -187,18 +197,8 @@ class thread : public voo::casein_thread {
 
         ppl_render_pass rpc{&ppl, sw.extent()};
 
-        const auto stamp = [&rpc](auto &img, float y, dotz::vec2 sz,
-                                  float a = 1.0f) {
-          rpc.run(img.dset(), [&](auto &buf) {
-            *buf++ = {
-                .r = {{-sz.x * 0.5f, y - sz.y * 0.5f}, sz},
-                .uv = {{0, 0}, {1, 1}},
-                .mult = {1.0f, 1.0f, 1.0f, a},
-            };
-          });
-        };
 #if SHOW_SPLASH
-        const auto splash = [&](auto &spl, float &ms) {
+        const auto splash = [&rpc, dt](auto &spl, float &ms) {
           ms += dt;
           if (ms > 3000.0f)
             return false;
@@ -206,7 +206,7 @@ class thread : public voo::casein_thread {
           float s = ms / 1000.0f;
           float a = sinf(s * 3.14 / 3.0);
 
-          stamp(spl, 0.0f, spl.size(1.6f), a);
+          rpc.stamp(spl.dset(), 0.0f, spl.size(1.6f), a);
           // TODO: how to tween alpha and keep cmd_buf and vbuf intact?
           // TODO: lazy load image or pause until image is loaded?
           return true;
@@ -225,8 +225,8 @@ class thread : public voo::casein_thread {
           else
             m_sel_max = 0;
 
-          stamp(bg, 0.0f, {2.0f * sw.aspect(), 2.0f}, a);
-          stamp(logo, -0.5f, logo.size(0.6f), a);
+          rpc.stamp(bg.dset(), 0.0f, {2.0f * sw.aspect(), 2.0f}, a);
+          rpc.stamp(logo.dset(), -0.5f, logo.size(0.6f), a);
 
           const auto bar = [&](rect r) {
             constexpr const dotz::vec2 bsz{0.05f, -0.05f};
