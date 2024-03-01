@@ -116,7 +116,9 @@ class thread : public voo::casein_thread {
         float dt = time.millis();
         time = {};
 
-        auto rpc = sw.cmd_buf_render_pass_continue(scb);
+        voo::cmd_buf_render_pass_continue rpc{scb, dq.render_pass()};
+        vee::cmd_set_viewport(*rpc, sw.extent());
+        vee::cmd_set_scissor(*rpc, sw.extent());
         vee::cmd_bind_gr_pipeline(*rpc, *gp);
         vee::cmd_push_vertex_constants(*rpc, *pl, &pc);
         vee::cmd_bind_vertex_buffers(*rpc, 1, insts.local_buffer());
