@@ -167,7 +167,7 @@ public:
 };
 
 class thread : public voo::casein_thread {
-  casein::keys m_last_key_down{};
+  volatile casein::keys m_last_key_down{};
 
   void key_down(const casein::events::key_down &e) override {
     m_last_key_down = *e;
@@ -216,17 +216,17 @@ class thread : public voo::casein_thread {
           if (mmout && mmdt == 0.0f)
             return mmsel + 1;
 
-          if (mmout)
+          if (mmout) {
             mmdt -= dt;
-          else
+            if (mmdt < 0)
+              mmdt = 0.0f;
+          } else {
             mmdt += dt;
+            if (mmdt > 1000.0f)
+              mmdt = 1000.0f;
+          }
 
           float a = mmdt / 1000.0f;
-          if (a > 1.0f)
-            a = 1.0f;
-          if (a < 0.0f)
-            a = 0.0f;
-
           if (!mmout && a == 1.0f && m_last_key_down) {
             constexpr const auto mx = sizeof(mmtxt_szs) / sizeof(mmtxt_szs[0]);
             if (m_last_key_down == casein::K_DOWN)
