@@ -198,9 +198,10 @@ class thread : public voo::casein_thread {
         mmtxt.draw("Credits"),  mmtxt.draw("Exit"),
     };
     unsigned mmsel{};
+    bool mmout{};
+    float mmdt{};
 
     sitime::stopwatch time{};
-    float bg_dt{};
 
     while (!interrupted()) {
       voo::swapchain_and_stuff sw{dq};
@@ -212,19 +213,28 @@ class thread : public voo::casein_thread {
         ppl_render_pass rpc{&ppl, sw.extent()};
 
         const auto main_menu = [&] {
-          auto &ms = bg_dt;
-          ms += dt;
+          if (mmout && mmdt == 0.0f)
+            return mmsel + 1;
 
-          float a = ms / 1000.0f;
+          if (mmout)
+            mmdt -= dt;
+          else
+            mmdt += dt;
+
+          float a = mmdt / 1000.0f;
           if (a > 1.0f)
             a = 1.0f;
+          if (a < 0.0f)
+            a = 0.0f;
 
-          if (a == 1.0f && m_last_key_down) {
+          if (!mmout && a == 1.0f && m_last_key_down) {
             constexpr const auto mx = sizeof(mmtxt_szs) / sizeof(mmtxt_szs[0]);
             if (m_last_key_down == casein::K_DOWN)
               mmsel = (mmsel + 1) % mx;
             if (m_last_key_down == casein::K_UP)
               mmsel = (mx + mmsel - 1) % mx;
+            if (m_last_key_down == casein::K_ENTER)
+              mmout = true;
           }
 
           rpc.stamp(bg.dset(), 0.0f, {2.0f * sw.aspect(), 2.0f}, a);
@@ -315,7 +325,7 @@ class thread : public voo::casein_thread {
               v += uv.y;
             }
           });
-          return 0;
+          return 0U;
         };
 
 #if SHOW_SPLASH
@@ -326,7 +336,10 @@ class thread : public voo::casein_thread {
 #endif
 
         switch (main_menu()) {
+        case 0:
+          break;
         default:
+          mmout = false;
           break;
         }
       };
