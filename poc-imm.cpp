@@ -317,10 +317,11 @@ class thread : public voo::casein_thread {
             float v = 0.0f;
             unsigned i = 0;
             for (auto uv : mmtxt_szs) {
+              float aa = (i == 1 && !has_game) ? 0.4f : a;
               auto sz = uv * 1.4f;
               auto hsz = -sz * 0.5f;
-              auto colour = i++ == mmsel ? dotz::vec4{0.0f, 0.0f, 0.0f, a}
-                                         : dotz::vec4{0.5f, 0.2f, 0.1f, a};
+              auto colour = i++ == mmsel ? dotz::vec4{0.0f, 0.0f, 0.0f, aa}
+                                         : dotz::vec4{0.5f, 0.2f, 0.1f, aa};
               *buf++ = {
                   .r = {{hsz.x, y + hsz.y}, sz},
                   .uv = {{0.0f, v}, uv},
