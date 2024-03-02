@@ -345,9 +345,12 @@ class thread : public voo::casein_thread {
           break;
         case 1: // new game
           has_game = true;
+          mmout = false;
           break;
         case 2: // continue
           has_game = false;
+          mmout = false;
+          mmsel = 0;
           break;
         default:
           mmout = false;
