@@ -201,6 +201,8 @@ class thread : public voo::casein_thread {
     bool mmout{};
     float mmdt{};
 
+    bool has_game{};
+
     sitime::stopwatch time{};
 
     while (!interrupted()) {
@@ -229,10 +231,13 @@ class thread : public voo::casein_thread {
           float a = mmdt / 1000.0f;
           if (!mmout && a == 1.0f && m_last_key_down) {
             constexpr const auto mx = sizeof(mmtxt_szs) / sizeof(mmtxt_szs[0]);
-            if (m_last_key_down == casein::K_DOWN)
-              mmsel = (mmsel + 1) % mx;
-            if (m_last_key_down == casein::K_UP)
-              mmsel = (mx + mmsel - 1) % mx;
+            do {
+              if (m_last_key_down == casein::K_DOWN)
+                mmsel = (mmsel + 1) % mx;
+              if (m_last_key_down == casein::K_UP)
+                mmsel = (mx + mmsel - 1) % mx;
+            } while (!has_game && mmsel == 1);
+
             if (m_last_key_down == casein::K_ENTER)
               mmout = true;
           }
@@ -337,6 +342,12 @@ class thread : public voo::casein_thread {
 
         switch (main_menu()) {
         case 0:
+          break;
+        case 1: // new game
+          has_game = true;
+          break;
+        case 2: // continue
+          has_game = false;
           break;
         default:
           mmout = false;
