@@ -167,16 +167,10 @@ public:
 };
 
 class thread : public voo::casein_thread {
-  int m_sel{};
-  int m_sel_max{};
+  casein::keys m_last_key_down{};
 
   void key_down(const casein::events::key_down &e) override {
-    if (m_sel_max == 0)
-      return;
-    if (*e == casein::K_DOWN)
-      m_sel = (m_sel + 1) % m_sel_max;
-    if (*e == casein::K_UP)
-      m_sel = (m_sel_max + m_sel - 1) % m_sel_max;
+    m_last_key_down = *e;
   }
   void run() override {
     voo::device_and_queue dq{"hide-immediate", native_ptr()};
@@ -203,6 +197,7 @@ class thread : public voo::casein_thread {
         mmtxt.draw("New Game"), mmtxt.draw("Continue"), mmtxt.draw("Options"),
         mmtxt.draw("Credits"),  mmtxt.draw("Exit"),
     };
+    unsigned mmsel{};
 
     sitime::stopwatch time{};
     float bg_dt{};
@@ -224,10 +219,13 @@ class thread : public voo::casein_thread {
           if (a > 1.0f)
             a = 1.0f;
 
-          if (a == 1.0f)
-            m_sel_max = sizeof(mmtxt_szs) / sizeof(mmtxt_szs[0]);
-          else
-            m_sel_max = 0;
+          if (a == 1.0f && m_last_key_down) {
+            constexpr const auto mx = sizeof(mmtxt_szs) / sizeof(mmtxt_szs[0]);
+            if (m_last_key_down == casein::K_DOWN)
+              mmsel = (mmsel + 1) % mx;
+            if (m_last_key_down == casein::K_UP)
+              mmsel = (mx + mmsel - 1) % mx;
+          }
 
           rpc.stamp(bg.dset(), 0.0f, {2.0f * sw.aspect(), 2.0f}, a);
           rpc.stamp(logo.dset(), -0.5f, logo.size(0.6f), a);
@@ -291,7 +289,7 @@ class thread : public voo::casein_thread {
             for (auto uv : mmtxt_szs) {
               auto sz = uv * 1.4f;
               auto hsz = -sz * 0.5f;
-              if (i++ == m_sel) {
+              if (i++ == mmsel) {
                 bar({{hsz.x, y + hsz.y}, sz});
                 break;
               }
@@ -306,7 +304,7 @@ class thread : public voo::casein_thread {
             for (auto uv : mmtxt_szs) {
               auto sz = uv * 1.4f;
               auto hsz = -sz * 0.5f;
-              auto colour = i++ == m_sel ? dotz::vec4{0.0f, 0.0f, 0.0f, a}
+              auto colour = i++ == mmsel ? dotz::vec4{0.0f, 0.0f, 0.0f, a}
                                          : dotz::vec4{0.5f, 0.2f, 0.1f, a};
               *buf++ = {
                   .r = {{hsz.x, y + hsz.y}, sz},
@@ -335,6 +333,7 @@ class thread : public voo::casein_thread {
 
       extent_loop(dq.queue(), sw, [&] {
         refresh();
+        m_last_key_down = {};
 
         sw.queue_one_time_submit(dq.queue(), [&](auto pcb) {
           mmtxt.setup_copy(*pcb);
