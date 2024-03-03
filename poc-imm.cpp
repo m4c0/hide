@@ -353,6 +353,9 @@ class thread : public voo::casein_thread {
           mmout = false;
           mmsel = 0;
           break;
+        case 5:
+          casein::exit(0);
+          break;
         default:
           mmout = false;
           break;
