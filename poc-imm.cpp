@@ -34,6 +34,7 @@ struct upc {
 };
 
 class pipeline {
+  static constexpr const auto max_dsets = 16;
   static constexpr const auto max_quads = 10240;
 
   voo::one_quad m_quad;
@@ -44,6 +45,7 @@ class pipeline {
 
   vee::render_pass::type m_rp;
   vee::descriptor_set_layout m_dsl;
+  vee::descriptor_pool m_dpool;
   vee::pipeline_layout m_pl;
   vee::gr_pipeline m_gp;
 
@@ -55,6 +57,8 @@ public:
       , m_scb{vee::allocate_secondary_command_buffer(*m_cpool)}
       , m_rp{rp}
       , m_dsl{vee::create_descriptor_set_layout({vee::dsl_fragment_sampler()})}
+      , m_dpool{vee::create_descriptor_pool(
+            max_dsets, {vee::combined_image_sampler(max_dsets)})}
       , m_pl{vee::create_pipeline_layout(
             *m_dsl, vee::vertex_push_constant_range<upc>())}
       , m_gp{vee::create_graphics_pipeline({
@@ -105,6 +109,10 @@ public:
     vee::cmd_push_vertex_constants(*rpc, *m_pl, &pc);
     vee::cmd_bind_vertex_buffers(*rpc, 1, m_insts.local_buffer());
     return rpc;
+  }
+
+  [[nodiscard]] auto allocate_descriptor_set() {
+    return vee::allocate_descriptor_set(*m_dpool, *m_dsl);
   }
 
   void setup_copy(vee::command_buffer cb) { m_insts.setup_copy(cb); }
@@ -177,12 +185,9 @@ class thread : public voo::casein_thread {
 
     pipeline ppl{dq.physical_device(), dq.queue_family(), dq.render_pass()};
 
-    auto dsl = ppl.descriptor_set_layout();
-    auto dpool =
-        vee::create_descriptor_pool(16, {vee::combined_image_sampler(16)});
     const auto load_img = [&](jute::view fn) {
       return hide::image{dq.physical_device(), dq.queue(),
-                         vee::allocate_descriptor_set(*dpool, dsl), fn};
+                         ppl.allocate_descriptor_set(), fn};
     };
 
     splash spl1{load_img("BrainF.png")};
@@ -192,7 +197,7 @@ class thread : public voo::casein_thread {
     auto bar_bg = load_img("m3-storeCounter_bar.png");
 
     hide::text mmtxt{dq.physical_device(), dq.queue(),
-                     vee::allocate_descriptor_set(*dpool, dsl)};
+                     ppl.allocate_descriptor_set()};
     dotz::vec2 mmtxt_szs[]{
         mmtxt.draw("New Game"), mmtxt.draw("Continue"), mmtxt.draw("Options"),
         mmtxt.draw("Credits"),  mmtxt.draw("Exit"),
