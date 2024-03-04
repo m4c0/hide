@@ -253,6 +253,7 @@ class thread : public voo::casein_thread {
         mmtxt.draw("New Game"), mmtxt.draw("Continue"), mmtxt.draw("Options"),
         mmtxt.draw("Credits"),  mmtxt.draw("Exit"),
     };
+    mmtxt.run_once();
     unsigned mmsel{};
     bool mmout{};
     float mmdt{};
@@ -370,7 +371,6 @@ class thread : public voo::casein_thread {
         m_last_key_down = {};
 
         sw.queue_one_time_submit(dq.queue(), [&](auto pcb) {
-          mmtxt.setup_copy(*pcb);
           ppl.setup_copy(*pcb);
 
           auto rp = sw.cmd_render_pass({

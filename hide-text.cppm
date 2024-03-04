@@ -15,15 +15,21 @@ auto &font() {
   static wtf::face face{wtf.new_face("VictorMono-Regular.otf", font_h)};
   return face;
 }
-export class text {
+export class text : voo::update_thread {
   vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
   voo::h2l_image m_img;
   vee::descriptor_set m_dset;
   int m_pen_y = font_h;
 
+  void build_cmd_buf(vee::command_buffer cb) override {
+    voo::cmd_buf_one_time_submit pcb{cb};
+    m_img.setup_copy(cb);
+  }
+
 public:
   text(vee::physical_device pd, voo::queue *q, vee::descriptor_set dset)
-      : m_img{pd, 1024, 1024, false}
+      : update_thread{q}
+      , m_img{pd, 1024, 1024, false}
       , m_dset{dset} {
     vee::update_descriptor_set(dset, 0, m_img.iv(), *m_smp);
   }
@@ -42,6 +48,6 @@ public:
     return {pen_x / 1024.0f, line_h / 1024.0f};
   }
 
-  void setup_copy(vee::command_buffer cb) { m_img.setup_copy(cb); }
+  using update_thread::run_once;
 };
 } // namespace hide
