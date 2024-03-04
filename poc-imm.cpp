@@ -270,6 +270,7 @@ class thread : public voo::casein_thread {
         ppl_render_pass rpc{&ppl, sw.extent()};
 
         const auto main_menu = [&] {
+          constexpr const auto fade_duration = 300.0f;
           if (mmout && mmdt == 0.0f)
             return mmsel + 1;
 
@@ -279,11 +280,11 @@ class thread : public voo::casein_thread {
               mmdt = 0.0f;
           } else {
             mmdt += dt;
-            if (mmdt > 1000.0f)
-              mmdt = 1000.0f;
+            if (mmdt > fade_duration)
+              mmdt = fade_duration;
           }
 
-          float a = mmdt / 1000.0f;
+          float a = mmdt / fade_duration;
           if (!mmout && a == 1.0f && m_last_key_down) {
             const auto mx = mmtxt_szs.size();
             do {
