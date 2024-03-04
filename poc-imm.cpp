@@ -247,13 +247,11 @@ class thread : public voo::casein_thread {
     auto logo = load_img("m3-game_title.png");
     selection_bar bar{load_img("m3-storeCounter_bar.png")};
 
+    using namespace jute::literals;
     hide::text mmtxt{dq.physical_device(), dq.queue(),
                      ppl.allocate_descriptor_set()};
-    dotz::vec2 mmtxt_szs[]{
-        mmtxt.draw("New Game"), mmtxt.draw("Continue"), mmtxt.draw("Options"),
-        mmtxt.draw("Credits"),  mmtxt.draw("Exit"),
-    };
-    mmtxt.run_once();
+    auto mmtxt_szs = mmtxt.draw_all("New Game"_s, "Continue"_s, "Options"_s,
+                                    "Credits"_s, "Exit"_s);
     unsigned mmsel{};
     bool mmout{};
     float mmdt{};
@@ -287,7 +285,7 @@ class thread : public voo::casein_thread {
 
           float a = mmdt / 1000.0f;
           if (!mmout && a == 1.0f && m_last_key_down) {
-            constexpr const auto mx = sizeof(mmtxt_szs) / sizeof(mmtxt_szs[0]);
+            const auto mx = mmtxt_szs.size();
             do {
               if (m_last_key_down == casein::K_DOWN)
                 mmsel = (mmsel + 1) % mx;

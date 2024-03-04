@@ -2,7 +2,9 @@
 
 export module hide:text;
 import dotz;
+import hai;
 import jute;
+import traits;
 import vee;
 import voo;
 import what_the_font;
@@ -46,6 +48,14 @@ public:
 
     m_pen_y += line_h;
     return {pen_x / 1024.0f, line_h / 1024.0f};
+  }
+  [[nodiscard]] hai::array<dotz::vec2>
+  draw_all(traits::same_as<jute::view> auto... strs) {
+    hai::array<dotz::vec2> res{sizeof...(strs)};
+    unsigned i = 0;
+    ((res[i++] = draw(strs)), ...);
+    run_once();
+    return res;
   }
 
   using update_thread::run_once;
