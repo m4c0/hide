@@ -11,6 +11,7 @@
 
 import casein;
 import dotz;
+import hai;
 import hide;
 import jute;
 import sitime;
@@ -252,6 +253,20 @@ class thread : public voo::casein_thread {
                      ppl.allocate_descriptor_set()};
     auto mmtxt_szs = mmtxt.draw_all("New Game"_s, "Continue"_s, "Options"_s,
                                     "Credits"_s, "Exit"_s);
+    hai::array<inst> mmtxt_is{mmtxt_szs.size()};
+    {
+      float y = 0.0f;
+      float v = 0.0f;
+      for (auto i = 0; i < mmtxt_is.size(); i++) {
+        auto uv = mmtxt_szs[i];
+        auto sz = uv * 1.4f;
+        auto hsz = -sz * 0.5f;
+        mmtxt_is[i] = {.r = {{hsz.x, y + hsz.y}, sz}, .uv = {{0.0f, v}, uv}};
+        y += sz.y;
+        v += uv.y;
+      }
+    }
+
     unsigned mmsel{};
     bool mmout{};
     float mmdt{};
@@ -300,38 +315,17 @@ class thread : public voo::casein_thread {
 
           rpc.stamp(bg.dset(), 0.0f, {2.0f * sw.aspect(), 2.0f}, a);
           rpc.stamp(logo.dset(), -0.5f, logo.size(0.6f), a);
-
-          {
-            float y = 0.0f;
-            unsigned i = 0;
-            for (auto uv : mmtxt_szs) {
-              auto sz = uv * 1.4f;
-              auto hsz = -sz * 0.5f;
-              if (i++ == mmsel) {
-                bar(&rpc, {{hsz.x, y + hsz.y}, sz}, a);
-                break;
-              }
-              y += sz.y;
-            }
-          }
+          bar(&rpc, mmtxt_is[mmsel].r, a);
 
           rpc.run(mmtxt.dset(), [&](auto &buf) {
-            float y = 0.0f;
-            float v = 0.0f;
-            unsigned i = 0;
-            for (auto uv : mmtxt_szs) {
+            for (auto i = 0; i < mmtxt_szs.size(); i++) {
               float aa = (i == 1 && !has_game) ? 0.4f * a : a;
-              auto sz = uv * 1.4f;
-              auto hsz = -sz * 0.5f;
-              auto colour = i++ == mmsel ? dotz::vec4{0.0f, 0.0f, 0.0f, aa}
-                                         : dotz::vec4{0.5f, 0.2f, 0.1f, aa};
-              *buf++ = {
-                  .r = {{hsz.x, y + hsz.y}, sz},
-                  .uv = {{0.0f, v}, uv},
-                  .mult = colour,
-              };
-              y += sz.y;
-              v += uv.y;
+
+              auto inst = mmtxt_is[i];
+              inst.mult = i == mmsel ? dotz::vec4{0.0f, 0.0f, 0.0f, aa}
+                                     : dotz::vec4{0.5f, 0.2f, 0.1f, aa};
+
+              *buf++ = inst;
             }
           });
           return 0U;
