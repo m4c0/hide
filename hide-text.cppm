@@ -38,7 +38,7 @@ public:
 
   [[nodiscard]] constexpr auto dset() const noexcept { return m_dset; }
 
-  [[nodiscard]] dotz::vec2 draw(jute::view str) {
+  [[nodiscard]] dotz::vec4 draw(jute::view str) {
     int pen_x = 0;
 
     voo::mapmem mem{m_img.host_memory()};
@@ -46,16 +46,9 @@ public:
     font().shape_en(str).draw(img, m_img.width(), m_img.height(), &pen_x,
                               &m_pen_y);
 
+    float v0 = (m_pen_y - font_h) / 1024.0f;
     m_pen_y += line_h;
-    return {pen_x / 1024.0f, line_h / 1024.0f};
-  }
-  [[nodiscard]] hai::array<dotz::vec2>
-  draw_all(traits::same_as<jute::view> auto... strs) {
-    hai::array<dotz::vec2> res{sizeof...(strs)};
-    unsigned i = 0;
-    ((res[i++] = draw(strs)), ...);
-    run_once();
-    return res;
+    return {0.0f, v0, pen_x / 1024.0f, line_h / 1024.0f};
   }
 
   using update_thread::run_once;

@@ -142,14 +142,18 @@ public:
     }
   }
 
-  void stamp(vee::descriptor_set dset, float y, dotz::vec2 sz, float a = 1.0f) {
+  void stamp(vee::descriptor_set dset, float y, dotz::vec2 sz, rect uv,
+             float a = 1.0f) {
     run(dset, [&](auto &buf) {
       *buf++ = {
           .r = {{-sz.x * 0.5f, y - sz.y * 0.5f}, sz},
-          .uv = {{0, 0}, {1, 1}},
+          .uv = uv,
           .mult = {1.0f, 1.0f, 1.0f, a},
       };
     });
+  }
+  void stamp(vee::descriptor_set dset, float y, dotz::vec2 sz, float a = 1.0f) {
+    stamp(dset, y, sz, {{0, 0}, {1, 1}}, a);
   }
 };
 
@@ -226,6 +230,27 @@ public:
   }
 };
 
+class menu_option {
+  static unsigned new_id() {
+    static unsigned i{};
+    return ++i;
+  }
+
+  [[maybe_unused]] hide::text *m_txt;
+  dotz::vec4 m_uv;
+  unsigned m_id{new_id()};
+
+public:
+  menu_option(hide::text *t, jute::view str) : m_txt{t}, m_uv{t->draw(str)} {}
+
+  bool operator()(ppl_render_pass *rpc, float y, unsigned sel, float a) {
+    dotz::vec2 sz{m_uv.z, m_uv.w};
+    rect uv{{m_uv.x, m_uv.y}, {m_uv.z, m_uv.w}};
+    rpc->stamp(m_txt->dset(), y, sz * 1.4f, uv, a);
+    return sel == m_id;
+  }
+};
+
 class thread : public voo::casein_thread {
   volatile casein::keys m_last_key_down{};
 
@@ -248,24 +273,16 @@ class thread : public voo::casein_thread {
     auto logo = load_img("m3-game_title.png");
     selection_bar bar{load_img("m3-storeCounter_bar.png")};
 
-    using namespace jute::literals;
     hide::text mmtxt{dq.physical_device(), dq.queue(),
                      ppl.allocate_descriptor_set()};
-    auto mmtxt_szs = mmtxt.draw_all("New Game"_s, "Continue"_s, "Options"_s,
-                                    "Credits"_s, "Exit"_s);
-    hai::array<inst> mmtxt_is{mmtxt_szs.size()};
-    {
-      float y = 0.0f;
-      float v = 0.0f;
-      for (auto i = 0; i < mmtxt_is.size(); i++) {
-        auto uv = mmtxt_szs[i];
-        auto sz = uv * 1.4f;
-        auto hsz = -sz * 0.5f;
-        mmtxt_is[i] = {.r = {{hsz.x, y + hsz.y}, sz}, .uv = {{0.0f, v}, uv}};
-        y += sz.y;
-        v += uv.y;
-      }
-    }
+
+    menu_option mm_new{&mmtxt, "New Game"};
+    menu_option mm_cont{&mmtxt, "Continue"};
+    menu_option mm_opts{&mmtxt, "Options"};
+    menu_option mm_creds{&mmtxt, "Credits"};
+    menu_option mm_exit{&mmtxt, "Exit"};
+
+    mmtxt.run_once();
 
     unsigned mmsel{};
     bool mmout{};
@@ -301,6 +318,7 @@ class thread : public voo::casein_thread {
 
           float a = mmdt / fade_duration;
           if (!mmout && a == 1.0f && m_last_key_down) {
+            /*
             const auto mx = mmtxt_szs.size();
             do {
               if (m_last_key_down == casein::K_DOWN)
@@ -311,12 +329,19 @@ class thread : public voo::casein_thread {
 
             if (m_last_key_down == casein::K_ENTER)
               mmout = true;
+              */
           }
 
           rpc.stamp(bg.dset(), 0.0f, {2.0f * sw.aspect(), 2.0f}, a);
           rpc.stamp(logo.dset(), -0.5f, logo.size(0.6f), a);
-          bar(&rpc, mmtxt_is[mmsel].r, a);
+          // bar(&rpc, mmtxt_is[mmsel].r, a);
 
+          mm_new(&rpc, 0.0f, mmsel, a);
+          mm_cont(&rpc, 0.1f, mmsel, a);
+          mm_opts(&rpc, 0.2f, mmsel, a);
+          mm_creds(&rpc, 0.3f, mmsel, a);
+          mm_exit(&rpc, 0.4f, mmsel, a);
+          /*
           rpc.run(mmtxt.dset(), [&](auto &buf) {
             for (auto i = 0; i < mmtxt_szs.size(); i++) {
               float aa = (i == 1 && !has_game) ? 0.4f * a : a;
@@ -328,6 +353,7 @@ class thread : public voo::casein_thread {
               *buf++ = inst;
             }
           });
+          */
           return 0U;
         };
 
