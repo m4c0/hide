@@ -124,6 +124,14 @@ class ppl_render_pass {
   voo::mapmem m_mem;
   inst *m_buf;
   inst *m_first;
+  inst *m_base;
+
+  void end_cycle() {
+    if (m_buf > m_base) {
+      m_ppl->one_quad().run(*m_rpc, 0, (m_buf - m_base), (m_base - m_first));
+    }
+    m_base = m_buf;
+  }
 
 public:
   ppl_render_pass(const pipeline *ppl, vee::extent ext)
@@ -131,29 +139,24 @@ public:
       , m_rpc{ppl->cmd_buf_render_pass_continue(ext)}
       , m_mem{ppl->host_memory()}
       , m_buf{static_cast<inst *>(*m_mem)}
-      , m_first{m_buf} {}
+      , m_first{m_buf}
+      , m_base{m_buf} {}
+  ~ppl_render_pass() { end_cycle(); }
 
-  void run(vee::descriptor_set dset, auto &&fn) {
-    auto base = m_buf;
-    fn(m_buf);
-    if (m_buf > base) {
-      vee::cmd_bind_descriptor_set(*m_rpc, m_ppl->pipeline_layout(), 0, dset);
-      m_ppl->one_quad().run(*m_rpc, 0, (m_buf - base), (base - m_first));
-    }
+  void bind_descriptor_set(vee::descriptor_set dset) {
+    end_cycle();
+    vee::cmd_bind_descriptor_set(*m_rpc, m_ppl->pipeline_layout(), 0, dset);
   }
+  void push_instance(const inst &i) { *m_buf++ = i; }
 
   void stamp(vee::descriptor_set dset, float y, dotz::vec2 sz, rect uv,
-             float a = 1.0f) {
-    run(dset, [&](auto &buf) {
-      *buf++ = {
-          .r = {{-sz.x * 0.5f, y - sz.y * 0.5f}, sz},
-          .uv = uv,
-          .mult = {1.0f, 1.0f, 1.0f, a},
-      };
+             float a) {
+    bind_descriptor_set(dset);
+    push_instance(inst{
+        .r = {{-sz.x * 0.5f, y - sz.y * 0.5f}, sz},
+        .uv = uv,
+        .mult = {1.0f, 1.0f, 1.0f, a},
     });
-  }
-  void stamp(vee::descriptor_set dset, float y, dotz::vec2 sz, float a = 1.0f) {
-    stamp(dset, y, sz, {{0, 0}, {1, 1}}, a);
   }
 };
 
@@ -164,47 +167,48 @@ public:
   explicit selection_bar(hide::image img) : m_img{traits::move(img)} {}
 
   void operator()(ppl_render_pass *rpc, rect r, float a) {
-    rpc->run(m_img.dset(), [&](auto &buf) {
-      constexpr const dotz::vec2 bsz{0.05f, -0.05f};
-      constexpr const auto mgn = 0.05f;
+    rpc->bind_descriptor_set(m_img.dset());
 
-      const auto xl = r.pos.x - bsz.x * 0.5f - mgn;
-      const auto xm = xl + mgn;
-      const auto xr = r.pos.x + r.size.x + bsz.x * 0.5f;
-      const auto xw = xr - xm;
+    constexpr const dotz::vec2 bsz{0.05f, -0.05f};
+    constexpr const auto mgn = 0.05f;
 
-      const auto yt = r.pos.y - bsz.y * 0.5f - mgn;
-      const auto ym = yt + mgn;
-      const auto yb = r.pos.y + r.size.y + bsz.y * 0.5f;
-      const auto yh = yb - ym;
+    const auto xl = r.pos.x - bsz.x * 0.5f - mgn;
+    const auto xm = xl + mgn;
+    const auto xr = r.pos.x + r.size.x + bsz.x * 0.5f;
+    const auto xw = xr - xm;
 
-      const dotz::vec4 m{1.0f, 1.0f, 1.0f, a};
+    const auto yt = r.pos.y - bsz.y * 0.5f - mgn;
+    const auto ym = yt + mgn;
+    const auto yb = r.pos.y + r.size.y + bsz.y * 0.5f;
+    const auto yh = yb - ym;
 
-      constexpr const auto ul = 0.25f;
-      constexpr const auto ur = 1.0f - ul;
-      constexpr const auto uw = ur - ul;
-      constexpr const auto vt = 0.15f;
-      constexpr const auto vb = 1.0f - vt;
-      constexpr const auto vh = vb - vt;
+    const dotz::vec4 m{1.0f, 1.0f, 1.0f, a};
 
-      *buf++ = {
-          .r = {{xl, yt}, {mgn}}, .uv = {{0.0f, 0.0f}, {ul, vt}}, .mult = m};
-      *buf++ = {
-          .r = {{xl, ym}, {mgn, yh}}, .uv = {{0.0f, vt}, {ul, vh}}, .mult = m};
-      *buf++ = {
-          .r = {{xl, yb}, {mgn}}, .uv = {{0.0f, vb}, {ul, vt}}, .mult = m};
-      *buf++ = {
-          .r = {{xm, yt}, {xw, mgn}}, .uv = {{ul, 0.0f}, {uw, vt}}, .mult = m};
-      *buf++ = {
-          .r = {{xm, ym}, {xw, yh}}, .uv = {{ul, vt}, {uw, vh}}, .mult = m};
-      *buf++ = {
-          .r = {{xm, yb}, {xw, mgn}}, .uv = {{ul, vb}, {uw, vt}}, .mult = m};
-      *buf++ = {
-          .r = {{xr, yt}, {mgn}}, .uv = {{ur, 0.0f}, {ul, vt}}, .mult = m};
-      *buf++ = {
-          .r = {{xr, ym}, {mgn, yh}}, .uv = {{ur, vt}, {ul, vh}}, .mult = m};
-      *buf++ = {.r = {{xr, yb}, {mgn}}, .uv = {{ur, vb}, {ul, vt}}, .mult = m};
-    });
+    constexpr const auto ul = 0.25f;
+    constexpr const auto ur = 1.0f - ul;
+    constexpr const auto uw = ur - ul;
+    constexpr const auto vt = 0.15f;
+    constexpr const auto vb = 1.0f - vt;
+    constexpr const auto vh = vb - vt;
+
+    rpc->push_instance(inst{
+        .r = {{xl, yt}, {mgn}}, .uv = {{0.0f, 0.0f}, {ul, vt}}, .mult = m});
+    rpc->push_instance(inst{
+        .r = {{xl, ym}, {mgn, yh}}, .uv = {{0.0f, vt}, {ul, vh}}, .mult = m});
+    rpc->push_instance(
+        inst{.r = {{xl, yb}, {mgn}}, .uv = {{0.0f, vb}, {ul, vt}}, .mult = m});
+    rpc->push_instance(inst{
+        .r = {{xm, yt}, {xw, mgn}}, .uv = {{ul, 0.0f}, {uw, vt}}, .mult = m});
+    rpc->push_instance(
+        inst{.r = {{xm, ym}, {xw, yh}}, .uv = {{ul, vt}, {uw, vh}}, .mult = m});
+    rpc->push_instance(inst{
+        .r = {{xm, yb}, {xw, mgn}}, .uv = {{ul, vb}, {uw, vt}}, .mult = m});
+    rpc->push_instance(
+        inst{.r = {{xr, yt}, {mgn}}, .uv = {{ur, 0.0f}, {ul, vt}}, .mult = m});
+    rpc->push_instance(inst{
+        .r = {{xr, ym}, {mgn, yh}}, .uv = {{ur, vt}, {ul, vh}}, .mult = m});
+    rpc->push_instance(
+        inst{.r = {{xr, yb}, {mgn}}, .uv = {{ur, vb}, {ul, vt}}, .mult = m});
   }
 };
 
@@ -223,7 +227,7 @@ public:
     float s = m_timer / 1000.0f;
     float a = sinf(s * 3.14 / 3.0);
 
-    rpc->stamp(m_img.dset(), 0.0f, m_img.size(1.6f), a);
+    rpc->stamp(m_img.dset(), 0.0f, m_img.size(1.6f), {{0, 0}, {1, 1}}, a);
     // TODO: how to tween alpha and keep cmd_buf and vbuf intact?
     // TODO: lazy load image or pause until image is loaded?
     return true;
@@ -332,8 +336,9 @@ class thread : public voo::casein_thread {
               */
           }
 
-          rpc.stamp(bg.dset(), 0.0f, {2.0f * sw.aspect(), 2.0f}, a);
-          rpc.stamp(logo.dset(), -0.5f, logo.size(0.6f), a);
+          rpc.stamp(bg.dset(), 0.0f, {2.0f * sw.aspect(), 2.0f},
+                    {{0, 0}, {1, 1}}, a);
+          rpc.stamp(logo.dset(), -0.5f, logo.size(0.6f), {{0, 0}, {1, 1}}, a);
           // bar(&rpc, mmtxt_is[mmsel].r, a);
 
           mm_new(&rpc, 0.0f, mmsel, a);
