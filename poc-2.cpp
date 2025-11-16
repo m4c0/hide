@@ -52,21 +52,26 @@ struct ss {
 };
 hai::uptr<ss> gss {};
 
+static unsigned map() {
+  unsigned count = 0;
+
+  voo::memiter<inst> m { *gas->buf.memory, &count };
+  m += inst {
+    .pos { -1, -1 },
+    .colour { 0, 1, 1, 1 },
+  };
+  m += inst {
+    .pos { -0, -0 },
+    .colour { 1, 1, 1, 1 },
+  };
+
+  return count;
+}
+
 static void on_frame() {
   if (!gss) gss.reset(new ss {});
 
-  unsigned count = 0;
-  {
-    voo::memiter<inst> m { *gas->buf.memory, &count };
-    m += inst {
-      .pos { -1, -1 },
-      .colour { 0, 1, 1, 1 },
-    };
-    m += inst {
-      .pos { -0, -0 },
-      .colour { 1, 1, 1, 1 },
-    };
-  }
+  auto count = map();
 
   gss->sw.acquire_next_image();
   gss->sw.queue_one_time_submit(gas->dq.queue(), [&] {
