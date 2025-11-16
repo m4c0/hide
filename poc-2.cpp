@@ -26,7 +26,7 @@ struct ss {
     .render_pass = *gas->rp,
     .extent = sw.extent(),
     .shaders {
-      voo::shader { "poc-2.vert.spv" }.pipeline_vert_stage("main"),
+      voo::shader { "poc-2.vert.spv" }.pipeline_vert_stage("main", vee::specialisation_info<float>(0, sw.aspect())),
       voo::shader { "poc-2.frag.spv" }.pipeline_frag_stage("main"),
     },
     .bindings {
@@ -47,7 +47,7 @@ static void on_frame() {
     auto cb = gss->sw.command_buffer();
     auto rp = gss->sw.cmd_render_pass();
     vee::cmd_bind_gr_pipeline(cb, *gss->gp);
-    gas->quad.run(cb, 0);
+    gas->quad.run(cb, 0, 1);
   });
   gss->sw.queue_present(gas->dq.queue());
 }
