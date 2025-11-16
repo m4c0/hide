@@ -111,6 +111,7 @@ namespace l {
     for (auto c : node->children) {
       tr(c, { x, 0.f });
       x += c->size.x;
+      node->size.y = dotz::max(node->size.y, c->size.y);
     }
     node->size.x = x;
   }
@@ -119,6 +120,7 @@ namespace l {
     for (auto c : node->children) {
       tr(c, { 0.f, y });
       y += c->size.y;
+      node->size.x = dotz::max(node->size.x, c->size.x);
     }
     node->size.y = y;
   }
