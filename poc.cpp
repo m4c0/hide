@@ -1,4 +1,4 @@
-#pragma leco app
+//#pragma leco app
 #pragma leco add_resource "BrainF.png"
 #pragma leco add_resource "Lenna_(test_image).png"
 #pragma leco add_resource "m3-bg.png"
