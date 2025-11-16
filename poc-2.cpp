@@ -88,41 +88,79 @@ const int i = [] {
   return 0;
 }();
 
+struct widget {
+  inst inst {};
+  dotz::vec2 size {};
+
+  hai::varray<widget *> child { 128 };
+};
+static void layout(widget * node) {
+
+}
+
 static void run(voo::memiter<inst> & m) {
-  m += inst {
-    .pos { 0, 0 },
-    .colour { 1, 0, 0, 1 },
+  static hai::varray<widget> arena { 128 };
+  arena.truncate(0);
+
+  const auto alloc = [] {
+    arena.push_back(widget {});
+    return &arena[arena.size() - 1];
   };
-  m += inst {
-    .pos { 1, 0 },
-    .colour { 0, 1, 0, 1 },
-  };
-  m += inst {
-    .pos { 2, 0 },
-    .colour { 0, 0, 1, 1 },
-  };
-  m += inst {
-    .pos { 0, 1 },
-    .colour { 0.5f, 0.5f, 0.5f, 1.0f },
-  };
-  m += inst {
-    .pos { 0, 2 },
-    .colour { 1, 1, 0, 1 },
-  };
-  m += inst {
-    .pos { 1, 2 },
-    .colour { 1, 0, 1, 1 },
-  };
-  m += inst {
-    .pos { 2, 2 },
-    .colour { 0, 1, 1, 1 },
-  };
-  m += inst {
-    .pos { 3, 2 },
-    .colour { 0, 0, 0, 1 },
-  };
-  m += inst {
-    .pos { 4, 2 },
-    .colour { 1, 1, 1, 1 },
-  };
+
+  auto vbox = alloc();
+
+  auto top_nav = alloc();
+
+  auto lt_btn = alloc();
+  lt_btn->inst.colour = { 1, 0, 0, 1 };
+  lt_btn->size = { 1 };
+  top_nav->child.push_back(lt_btn);
+
+  auto title = alloc();
+  title->inst.colour = { 0, 1, 0, 1 };
+  title->size = { 1 };
+  top_nav->child.push_back(title);
+
+  auto rt_btn = alloc();
+  rt_btn->inst.colour = { 0, 0, 1, 1 };
+  rt_btn->size = { 1 };
+  top_nav->child.push_back(rt_btn);
+
+  vbox->child.push_back(top_nav);
+
+  auto cnt = alloc();
+  cnt->inst.colour = { 0.5f, 0.5f, 0.5f, 1.0f };
+  cnt->size = { 1 };
+  vbox->child.push_back(cnt);
+
+  auto bot_nav = alloc();
+
+  auto tab1 = alloc();
+  tab1->inst.colour = { 1, 1, 0, 1 };
+  tab1->size = { 1 };
+  bot_nav->child.push_back(tab1);
+
+  auto tab2 = alloc();
+  tab2->inst.colour = { 1, 0, 1, 1 };
+  tab2->size = { 1 };
+  bot_nav->child.push_back(tab2);
+
+  auto tab3 = alloc();
+  tab3->inst.colour = { 0, 1, 1, 1 };
+  tab3->size = { 1 };
+  bot_nav->child.push_back(tab3);
+
+  auto tab4 = alloc();
+  tab4->inst.colour = { 0, 0, 0, 1 };
+  tab4->size = { 1 };
+  bot_nav->child.push_back(tab4);
+
+  auto tab5 = alloc();
+  tab5->inst.colour = { 1, 1, 1, 1 };
+  tab5->size = { 1 };
+  bot_nav->child.push_back(tab5);
+
+  vbox->child.push_back(bot_nav);
+
+  layout(vbox);
 }
