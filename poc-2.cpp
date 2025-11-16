@@ -52,19 +52,12 @@ struct ss {
 };
 hai::uptr<ss> gss {};
 
+static void run(voo::memiter<inst> & m);
+
 static unsigned map() {
   unsigned count = 0;
-
   voo::memiter<inst> m { *gas->buf.memory, &count };
-  m += inst {
-    .pos { -1, -1 },
-    .colour { 0, 1, 1, 1 },
-  };
-  m += inst {
-    .pos { -0, -0 },
-    .colour { 1, 1, 1, 1 },
-  };
-
+  run(m);
   return count;
 }
 
@@ -94,3 +87,42 @@ const int i = [] {
   on(RESIZE, [] { gss = {}; });
   return 0;
 }();
+
+static void run(voo::memiter<inst> & m) {
+  m += inst {
+    .pos { 0, 0 },
+    .colour { 1, 0, 0, 1 },
+  };
+  m += inst {
+    .pos { 1, 0 },
+    .colour { 0, 1, 0, 1 },
+  };
+  m += inst {
+    .pos { 2, 0 },
+    .colour { 0, 0, 1, 1 },
+  };
+  m += inst {
+    .pos { 0, 1 },
+    .colour { 0.5f, 0.5f, 0.5f, 1.0f },
+  };
+  m += inst {
+    .pos { 0, 2 },
+    .colour { 1, 1, 0, 1 },
+  };
+  m += inst {
+    .pos { 1, 2 },
+    .colour { 1, 0, 1, 1 },
+  };
+  m += inst {
+    .pos { 2, 2 },
+    .colour { 0, 1, 1, 1 },
+  };
+  m += inst {
+    .pos { 3, 2 },
+    .colour { 0, 0, 0, 1 },
+  };
+  m += inst {
+    .pos { 4, 2 },
+    .colour { 1, 1, 1, 1 },
+  };
+}
