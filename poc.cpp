@@ -8,6 +8,7 @@
 export module poc;
 
 import casein;
+import dotz;
 import hai;
 import hide;
 import jute;
@@ -35,7 +36,7 @@ import what_the_font;
 // * Exit = duh
 
 static wtf::library g_wtf{};
-static wtf::face g_wtf_face_100{g_wtf.new_face("VictorMono-Regular.otf", 100)};
+static wtf::face g_wtf_face_100{g_wtf.new_face("VictorMono-Regular.otf")};
 
 void reset_quack(auto all, unsigned size) {
   for (auto i = 0; i < size; i++) {
@@ -46,7 +47,7 @@ void reset_quack(auto all, unsigned size) {
 auto cmd_render_pass(voo::swapchain_and_stuff *sw, vee::command_buffer cb) {
   return sw->cmd_render_pass({
       .command_buffer = cb,
-      .clear_color = {{0, 0, 0, 1}},
+      .clear_colours { vee::clear_colour(0, 0, 0, 1) },
   });
 }
 auto cmd_push_vert_frag_constants(voo::swapchain_and_stuff *sw,
@@ -75,32 +76,32 @@ public:
   virtual ~scene() = default;
 
   virtual scene *next() = 0;
-  virtual void run(voo::swapchain_and_stuff *sw,
-                   const voo::cmd_buf_one_time_submit &pcb) = 0;
+  virtual void run(voo::swapchain_and_stuff *sw, vee::command_buffer cb) = 0;
 
   virtual void key_down(casein::keys k) {}
 };
 
 class image {
   vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
-  voo::sires_image m_img;
+  voo::bound_image m_img {};
   vee::descriptor_set m_dset;
+  float m_aspect;
 
 public:
-  image(voo::device_and_queue *dq, quack::pipeline_stuff *ps, jute::view name)
-      : m_img{name, dq}
-      , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {
-    m_img.run_once();
+  image(voo::device_and_queue *dq, quack::pipeline_stuff *ps, jute::view name) :
+    m_dset { ps->allocate_descriptor_set(*m_img.iv, *m_smp) }
+  {
+    voo::load_image(name, dq->physical_device(), dq->queue(), &m_img, [this](auto sz) {
+      vee::update_descriptor_set(m_dset, 0, *m_img.iv, *m_smp);
+      m_aspect = static_cast<float>(sz.x) / static_cast<float>(sz.y);
+    });
   }
 
   [[nodiscard]] constexpr auto dset() const noexcept { return m_dset; }
-  [[nodiscard]] constexpr auto aspect() const noexcept {
-    return static_cast<float>(m_img.width()) /
-           static_cast<float>(m_img.height());
-  }
+  [[nodiscard]] constexpr auto aspect() const noexcept { return m_aspect; }
 
   [[nodiscard]] constexpr auto size(float h) const noexcept {
-    return quack::size{h * aspect(), h};
+    return dotz::vec2 { h * aspect(), h };
   }
 };
 class texts_shaper {
@@ -113,11 +114,11 @@ class texts_shaper {
   int m_pen_y = font_h;
   float m_v0 = 0;
   float m_y = 0;
-  quack::rect *m_pos;
-  quack::uv *m_uvs;
+  dotz::vec4 *m_pos;
+  dotz::vec4 *m_uvs;
 
 public:
-  texts_shaper(voo::h2l_image *img, quack::rect *pos, quack::uv *uvs)
+  texts_shaper(voo::h2l_image *img, dotz::vec4 *pos, dotz::vec4 *uvs)
       : m_mem{img->host_memory()}
       , m_w{img->width()}
       , m_h{img->height()}
@@ -133,10 +134,10 @@ public:
 
     float u1 = static_cast<float>(pen_x) / 1024.0f;
     float v1 = m_v0 + 0.125f;
-    *m_uvs++ = {{0, m_v0}, {u1, v1}};
+    *m_uvs++ = {0.f, m_v0, u1, v1};
 
     float w = h * pen_x / line_h;
-    *m_pos++ = {{0, m_y}, {w, h}};
+    *m_pos++ = {0.f, m_y, w, h};
 
     m_pen_y += line_h;
     m_v0 = v1;
@@ -156,10 +157,10 @@ class texts : public voo::update_thread {
 public:
   texts(voo::device_and_queue *dq, quack::pipeline_stuff *ps)
       : update_thread{dq->queue()}
-      , m_img{*dq, 1024, 1024, false}
+      , m_img { dq->physical_device(), 1024, 1024, VK_FORMAT_R8G8B8A8_SRGB }
       , m_dset{ps->allocate_descriptor_set(m_img.iv(), *m_smp)} {}
 
-  [[nodiscard]] auto shaper(quack::rect *pos, quack::uv *uvs) noexcept {
+  [[nodiscard]] auto shaper(dotz::vec4 *pos, dotz::vec4 *uvs) noexcept {
     return texts_shaper{&m_img, pos, uvs};
   }
   [[nodiscard]] constexpr auto dset() const noexcept { return m_dset; }
@@ -185,10 +186,9 @@ public:
     return this;
   }
 
-  void run(voo::swapchain_and_stuff *sw,
-           const voo::cmd_buf_one_time_submit &pcb) override {
-    auto rp = cmd_render_pass(sw, *pcb);
-    m_splash.render(*pcb, sw->aspect());
+  void run(voo::swapchain_and_stuff *sw, vee::command_buffer cb) override {
+    auto rp = cmd_render_pass(sw, cb);
+    m_splash.render(sw);
   }
 };
 
@@ -200,9 +200,8 @@ public:
 
   [[nodiscard]] scene *next() override;
 
-  void run(voo::swapchain_and_stuff *sw,
-           const voo::cmd_buf_one_time_submit &pcb) override {
-    auto rp = cmd_render_pass(sw, *pcb);
+  void run(voo::swapchain_and_stuff *sw, vee::command_buffer cb) override {
+    auto rp = cmd_render_pass(sw, cb);
   }
 };
 
@@ -235,37 +234,37 @@ public:
 
   [[nodiscard]] constexpr auto index() const noexcept { return m_idx; }
 
-  void set_pos(quack::rect *ps, const quack::rect *all) const {
+  void set_pos(dotz::vec4 * ps, const dotz::vec4 * all) const {
     auto p = all[m_idx];
 
     ps[0] = p;
 
     ps[1] = ps[3] = ps[4] = ps[6] = {{}, {sel_border, sel_border}};
-    ps[2] = ps[5] = {{}, {sel_border, p.h}};
-    ps[7] = ps[8] = {{}, {p.w, sel_border}};
+    ps[2] = ps[5] = {0.f, 0.f, sel_border, p.w};
+    ps[7] = ps[8] = {0.f, 0.f, p.z, sel_border};
 
     ps[1].x = ps[2].x = ps[3].x = p.x - sel_border;
     ps[7].x = ps[8].x = p.x;
-    ps[4].x = ps[5].x = ps[6].x = p.x + p.w;
+    ps[4].x = ps[5].x = ps[6].x = p.x + p.z;
 
     ps[1].y = ps[4].y = ps[7].y = p.y - sel_border;
     ps[2].y = ps[5].y = p.y;
-    ps[3].y = ps[6].y = ps[8].y = p.y + p.h;
+    ps[3].y = ps[6].y = ps[8].y = p.y + p.w;
   }
-  void set_uvs(quack::uv *uvs) const {
+  void set_uvs(dotz::vec4 * uvs) const {
     constexpr const float t = 0.05;
     constexpr const float b = 0.95;
     constexpr const float l = 0.05;
     constexpr const float r = 0.95;
-    uvs[0] = {{l, t}, {r, b}};
-    uvs[1] = {{0, 0}, {l, t}};
-    uvs[2] = {{0, t}, {l, b}};
-    uvs[3] = {{0, b}, {l, 1}};
-    uvs[4] = {{r, 0}, {1, t}};
-    uvs[5] = {{r, t}, {1, b}};
-    uvs[6] = {{r, b}, {1, 1}};
-    uvs[7] = {{l, 0}, {r, t}};
-    uvs[8] = {{l, b}, {r, 1}};
+    uvs[0] = {l,   t,   r,   b  };
+    uvs[1] = {0.f, 0.f, l,   t  };
+    uvs[2] = {0.f, t,   l,   b  };
+    uvs[3] = {0.f, b,   l,   1.f};
+    uvs[4] = {r,   0.f, 1.f, t  };
+    uvs[5] = {r,   t,   1.f, b  };
+    uvs[6] = {r,   b,   1.f, 1.f};
+    uvs[7] = {l,   0.f, r,   t  };
+    uvs[8] = {l,   b,   r,   1.f};
   }
 
   void handle_key(casein::keys k, int max) {
@@ -281,11 +280,11 @@ public:
   }
 };
 
-class options : public scene, public voo::update_thread {
+class options : public scene {
   enum items { o_sound, o_music, o_fullscreen, o_back, o_count };
 
   quack::pipeline_stuff m_ps;
-  quack::instance_batch m_ib;
+  quack::buffer_updater m_ib;
   background m_bg;
   selection_bg m_sel;
   texts m_txt;
@@ -302,7 +301,7 @@ class options : public scene, public voo::update_thread {
     m_ib.setup_copy(cb);
   }
 
-  void setup_positions(quack::rect *ps) {
+  void setup_positions(dotz::vec4 * ps) {
     for (auto i = 0; i < o_count; i++) {
       ps[1 + i].x = -0.3f;
     }
@@ -314,8 +313,6 @@ class options : public scene, public voo::update_thread {
 
     m_sel.set_pos(ps + 1 + o_count, ps + 1);
   }
-
-  using update_thread::run;
 
 public:
   options(voo::device_and_queue *dq)
@@ -348,8 +345,7 @@ public:
 
   [[nodiscard]] scene *next() override { return this; }
 
-  void run(voo::swapchain_and_stuff *sw,
-           const voo::cmd_buf_one_time_submit &pcb) override {
+  void run(voo::swapchain_and_stuff * sw, vee::command_buffer cb) override {
     auto rp = cmd_render_pass(sw, *pcb);
     m_ib.build_commands(*pcb);
     cmd_push_vert_frag_constants(sw, *pcb, &m_ps);

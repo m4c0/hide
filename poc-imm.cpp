@@ -17,6 +17,7 @@ import jute;
 import sitime;
 import traits;
 import vee;
+import vinyl;
 import voo;
 
 extern "C" float sinf(float);
@@ -65,7 +66,6 @@ public:
       , m_gp{vee::create_graphics_pipeline({
             .pipeline_layout = *m_pl,
             .render_pass = rp,
-            .depth_test = false,
             .shaders{
                 voo::shader("poc-imm.vert.spv").pipeline_vert_stage(),
                 voo::shader("poc-imm.frag.spv").pipeline_frag_stage(),
@@ -104,11 +104,11 @@ public:
     upc pc{static_cast<float>(ext.width) / static_cast<float>(ext.height)};
 
     voo::cmd_buf_render_pass_continue rpc{m_scb, m_rp};
-    vee::cmd_set_viewport(*rpc, ext);
-    vee::cmd_set_scissor(*rpc, ext);
-    vee::cmd_bind_gr_pipeline(*rpc, *m_gp);
-    vee::cmd_push_vertex_constants(*rpc, *m_pl, &pc);
-    vee::cmd_bind_vertex_buffers(*rpc, 1, m_insts.local_buffer());
+    vee::cmd_set_viewport(rpc, ext);
+    vee::cmd_set_scissor(rpc, ext);
+    vee::cmd_bind_gr_pipeline(rpc, *m_gp);
+    vee::cmd_push_vertex_constants(rpc, *m_pl, &pc);
+    vee::cmd_bind_vertex_buffers(rpc, 1, m_insts.local_buffer());
     return rpc;
   }
 
@@ -128,7 +128,7 @@ class ppl_render_pass {
 
   void end_cycle() {
     if (m_buf > m_base) {
-      m_ppl->one_quad().run(*m_rpc, 0, (m_buf - m_base), (m_base - m_first));
+      m_ppl->one_quad().run(m_rpc, 0, (m_buf - m_base), (m_base - m_first));
     }
     m_base = m_buf;
   }
@@ -145,7 +145,7 @@ public:
 
   void bind_descriptor_set(vee::descriptor_set dset) {
     end_cycle();
-    vee::cmd_bind_descriptor_set(*m_rpc, m_ppl->pipeline_layout(), 0, dset);
+    vee::cmd_bind_descriptor_set(m_rpc, m_ppl->pipeline_layout(), 0, dset);
   }
   void push_instance(const inst &i) { *m_buf++ = i; }
 
@@ -255,161 +255,162 @@ public:
   }
 };
 
-class thread : public voo::casein_thread {
-  volatile casein::keys m_last_key_down{};
+volatile casein::keys m_last_key_down{};
 
-  void key_down(const casein::events::key_down &e) override {
-    m_last_key_down = *e;
-  }
-  void run() override {
-    voo::device_and_queue dq{"hide-immediate", native_ptr()};
+struct app_stuff {
+  voo::device_and_queue dq { "hide-immediate", casein::native_ptr };
+  vee::render_pass rp = voo::single_att_render_pass(dq);
 
-    pipeline ppl{dq.physical_device(), dq.queue_family(), dq.render_pass()};
+  pipeline ppl { dq.physical_device(), dq.queue_family(), *rp };
+  splash spl1 {{ dq.physical_device(), dq.queue(), ppl.allocate_descriptor_set(), "BrainF.png" }};
+  splash spl2 {{ dq.physical_device(), dq.queue(), ppl.allocate_descriptor_set(), "Lenna_(test_image).png" }};
+  hide::image bg { dq.physical_device(), dq.queue(), ppl.allocate_descriptor_set(), "m3-bg.png" };
+  hide::image logo { dq.physical_device(), dq.queue(), ppl.allocate_descriptor_set(), "m3-game_title.png" };
+  selection_bar bar {{ dq.physical_device(), dq.queue(), ppl.allocate_descriptor_set(), "m3-storeCounter_bar.png" }};
 
-    const auto load_img = [&](jute::view fn) {
-      return hide::image{dq.physical_device(), dq.queue(),
-                         ppl.allocate_descriptor_set(), fn};
-    };
+  hide::text mmtxt { dq.physical_device(), dq.queue(), ppl.allocate_descriptor_set() };
+  menu_option mm_new   { &mmtxt, "New Game" };
+  menu_option mm_cont  { &mmtxt, "Continue" };
+  menu_option mm_opts  { &mmtxt, "Options"  };
+  menu_option mm_creds { &mmtxt, "Credits"  };
+  menu_option mm_exit  { &mmtxt, "Exit"     };
 
-    splash spl1{load_img("BrainF.png")};
-    splash spl2{load_img("Lenna_(test_image).png")};
-    auto bg = load_img("m3-bg.png");
-    auto logo = load_img("m3-game_title.png");
-    selection_bar bar{load_img("m3-storeCounter_bar.png")};
+  unsigned mmsel {};
+  bool mmout {};
+  float mmdt {};
 
-    hide::text mmtxt{dq.physical_device(), dq.queue(),
-                     ppl.allocate_descriptor_set()};
+  bool has_game{};
 
-    menu_option mm_new{&mmtxt, "New Game"};
-    menu_option mm_cont{&mmtxt, "Continue"};
-    menu_option mm_opts{&mmtxt, "Options"};
-    menu_option mm_creds{&mmtxt, "Credits"};
-    menu_option mm_exit{&mmtxt, "Exit"};
+  sitime::stopwatch time{};
 
+  app_stuff() {
     mmtxt.run_once();
-
-    unsigned mmsel{};
-    bool mmout{};
-    float mmdt{};
-
-    bool has_game{};
-
-    sitime::stopwatch time{};
-
-    while (!interrupted()) {
-      voo::swapchain_and_stuff sw{dq};
-
-      const auto refresh = [&] {
-        float dt = time.millis();
-        time = {};
-
-        ppl_render_pass rpc{&ppl, sw.extent()};
-
-        const auto main_menu = [&] {
-          constexpr const auto fade_duration = 300.0f;
-          if (mmout && mmdt == 0.0f)
-            return mmsel + 1;
-
-          if (mmout) {
-            mmdt -= dt;
-            if (mmdt < 0)
-              mmdt = 0.0f;
-          } else {
-            mmdt += dt;
-            if (mmdt > fade_duration)
-              mmdt = fade_duration;
-          }
-
-          float a = mmdt / fade_duration;
-          if (!mmout && a == 1.0f && m_last_key_down) {
-            /*
-            const auto mx = mmtxt_szs.size();
-            do {
-              if (m_last_key_down == casein::K_DOWN)
-                mmsel = (mmsel + 1) % mx;
-              if (m_last_key_down == casein::K_UP)
-                mmsel = (mx + mmsel - 1) % mx;
-            } while (!has_game && mmsel == 1);
-
-            if (m_last_key_down == casein::K_ENTER)
-              mmout = true;
-              */
-          }
-
-          rpc.stamp(bg.dset(), 0.0f, {2.0f * sw.aspect(), 2.0f},
-                    {{0, 0}, {1, 1}}, a);
-          rpc.stamp(logo.dset(), -0.5f, logo.size(0.6f), {{0, 0}, {1, 1}}, a);
-          // bar(&rpc, mmtxt_is[mmsel].r, a);
-
-          mm_new(&rpc, 0.0f, mmsel, a);
-          mm_cont(&rpc, 0.1f, mmsel, a);
-          mm_opts(&rpc, 0.2f, mmsel, a);
-          mm_creds(&rpc, 0.3f, mmsel, a);
-          mm_exit(&rpc, 0.4f, mmsel, a);
-          /*
-          rpc.run(mmtxt.dset(), [&](auto &buf) {
-            for (auto i = 0; i < mmtxt_szs.size(); i++) {
-              float aa = (i == 1 && !has_game) ? 0.4f * a : a;
-
-              auto inst = mmtxt_is[i];
-              inst.mult = i == mmsel ? dotz::vec4{0.0f, 0.0f, 0.0f, aa}
-                                     : dotz::vec4{0.5f, 0.2f, 0.1f, aa};
-
-              *buf++ = inst;
-            }
-          });
-          */
-          return 0U;
-        };
-
-#if SHOW_SPLASH
-        if (spl1(&rpc, dt))
-          return;
-        if (spl2(&rpc, dt))
-          return;
-#endif
-
-        switch (main_menu()) {
-        case 0:
-          break;
-        case 1: // new game
-          has_game = true;
-          mmout = false;
-          break;
-        case 2: // continue
-          has_game = false;
-          mmout = false;
-          mmsel = 0;
-          break;
-        case 5:
-          casein::exit(0);
-          break;
-        default:
-          mmout = false;
-          break;
-        }
-      };
-
-      extent_loop(dq.queue(), sw, [&] {
-        refresh();
-        m_last_key_down = {};
-
-        sw.queue_one_time_submit(dq.queue(), [&](auto pcb) {
-          ppl.setup_copy(*pcb);
-
-          auto rp = sw.cmd_render_pass({
-              .command_buffer = *pcb,
-              .clear_color = {},
-              .use_secondary_cmd_buf = true,
-          });
-          vee::cmd_execute_command(*pcb, ppl.secondary_command_buffer());
-        });
-      });
-    }
   }
 };
+static hai::uptr<app_stuff> gas {};
 
-extern "C" void casein_handle(const casein::event &e) {
-  static thread t{};
-  t.handle(e);
+struct sized_stuff {
+  voo::swapchain_and_stuff sw { gas->dq, *gas->rp };
+};
+static hai::uptr<sized_stuff> gss {};
+
+static void refresh() {
+  float dt = gas->time.millis();
+  gas->time = {};
+
+  ppl_render_pass rpc{&gas->ppl, gss->sw.extent()};
+
+  const auto main_menu = [&] {
+    constexpr const auto fade_duration = 300.0f;
+    if (gas->mmout && gas->mmdt == 0.0f)
+      return gas->mmsel + 1;
+
+    if (gas->mmout) {
+      gas->mmdt -= dt;
+      if (gas->mmdt < 0) gas->mmdt = 0.0f;
+    } else {
+      gas->mmdt += dt;
+      if (gas->mmdt > fade_duration) gas->mmdt = fade_duration;
+    }
+
+    float a = gas->mmdt / fade_duration;
+    if (!gas->mmout && a == 1.0f && m_last_key_down) {
+      /*
+         const auto mx = mmtxt_szs.size();
+         do {
+         if (m_last_key_down == casein::K_DOWN)
+         mmsel = (mmsel + 1) % mx;
+         if (m_last_key_down == casein::K_UP)
+         mmsel = (mx + mmsel - 1) % mx;
+         } while (!has_game && mmsel == 1);
+
+         if (m_last_key_down == casein::K_ENTER)
+         mmout = true;
+         */
+    }
+
+    rpc.stamp(gas->bg.dset(), 0.0f, {2.0f * gss->sw.aspect(), 2.0f}, {{0, 0}, {1, 1}}, a);
+    rpc.stamp(gas->logo.dset(), -0.5f, gas->logo.size(0.6f), {{0, 0}, {1, 1}}, a);
+    // bar(&rpc, mmtxt_is[mmsel].r, a);
+
+    gas->mm_new  (&rpc, 0.0f, gas->mmsel, a);
+    gas->mm_cont (&rpc, 0.1f, gas->mmsel, a);
+    gas->mm_opts (&rpc, 0.2f, gas->mmsel, a);
+    gas->mm_creds(&rpc, 0.3f, gas->mmsel, a);
+    gas->mm_exit (&rpc, 0.4f, gas->mmsel, a);
+    /*
+       rpc.run(mmtxt.dset(), [&](auto &buf) {
+       for (auto i = 0; i < mmtxt_szs.size(); i++) {
+       float aa = (i == 1 && !has_game) ? 0.4f * a : a;
+
+       auto inst = mmtxt_is[i];
+       inst.mult = i == mmsel ? dotz::vec4{0.0f, 0.0f, 0.0f, aa}
+       : dotz::vec4{0.5f, 0.2f, 0.1f, aa};
+
+     *buf++ = inst;
+     }
+     });
+     */
+    return 0U;
+  };
+
+#if SHOW_SPLASH
+  if (gas->spl1(&rpc, dt)) return;
+  if (gas->spl2(&rpc, dt)) return;
+#endif
+
+  switch (main_menu()) {
+    case 0:
+      break;
+    case 1: // new game
+      gas->has_game = true;
+      gas->mmout = false;
+      break;
+    case 2: // continue
+      gas->has_game = false;
+      gas->mmout = false;
+      gas->mmsel = 0;
+      break;
+    case 5:
+      casein::interrupt(casein::IRQ_QUIT);
+      break;
+    default:
+      gas->mmout = false;
+      break;
+  }
 }
+static void on_frame() {
+  refresh();
+
+  m_last_key_down = {};
+
+  gss->sw.queue_one_time_submit(gas->dq.queue(), [] {
+    auto cb = gss->sw.command_buffer();
+
+    gas->ppl.setup_copy(cb);
+
+    auto rp = gss->sw.render_pass_begin(vee::render_pass_begin {
+      .command_buffer = cb,
+      .use_secondary_cmd_buf = true,
+    });
+    vee::cmd_execute_command(cb, gas->ppl.secondary_command_buffer());
+  });
+}
+
+const int i = [] {
+  using namespace casein;
+  handle(KEY_DOWN, K_DOWN,  [] { m_last_key_down = K_DOWN;  });
+  handle(KEY_DOWN, K_UP,    [] { m_last_key_down = K_UP;    });
+  handle(KEY_DOWN, K_ENTER, [] { m_last_key_down = K_ENTER; });
+
+  using namespace vinyl;
+  on(START, [] { gas.reset(new app_stuff {}); });
+  on(RESIZE, [] { gss.reset(new sized_stuff {}); });
+  on(STOP, [] {
+    gss.reset(new sized_stuff {});
+    gas.reset(new app_stuff {});
+  });
+  on(FRAME, on_frame);
+
+  return 0;
+}();

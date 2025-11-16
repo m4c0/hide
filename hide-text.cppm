@@ -14,7 +14,7 @@ static constexpr const auto font_h = 100;
 static constexpr const auto line_h = 128;
 auto &font() {
   static wtf::library wtf{};
-  static wtf::face face{wtf.new_face("VictorMono-Regular.otf", font_h)};
+  static wtf::face face{wtf.new_face("VictorMono-Regular.otf")};
   return face;
 }
 export class text : voo::update_thread {
@@ -31,7 +31,7 @@ export class text : voo::update_thread {
 public:
   text(vee::physical_device pd, voo::queue *q, vee::descriptor_set dset)
       : update_thread{q}
-      , m_img{pd, 1024, 1024, false}
+      , m_img { pd, 1024, 1024, VK_FORMAT_R8G8B8A8_SRGB }
       , m_dset{dset} {
     vee::update_descriptor_set(dset, 0, m_img.iv(), *m_smp);
   }
