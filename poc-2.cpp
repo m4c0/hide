@@ -92,6 +92,11 @@ struct widget {
   inst inst {};
   dotz::vec2 size {};
 
+  struct {
+    bool x;
+    bool y;
+  } expand;
+
   void (*layout)(widget *) = nullptr;
 
   widget * children = nullptr;
@@ -155,6 +160,7 @@ static void run(voo::memiter<inst> & m) {
   vbox->layout = l::vbox;
 
   auto top_nav = alloc();
+  top_nav->expand.x = true;
   top_nav->layout = l::hbox;
 
   auto lt_btn = alloc();
@@ -165,6 +171,7 @@ static void run(voo::memiter<inst> & m) {
   auto title = alloc();
   title->inst.colour = { 0, 1, 0, 1 };
   title->size = { 1 };
+  title->expand.x = true;
   add_child(top_nav, title);
 
   auto rt_btn = alloc();
@@ -177,34 +184,41 @@ static void run(voo::memiter<inst> & m) {
   auto cnt = alloc();
   cnt->inst.colour = { 0.5f, 0.5f, 0.5f, 1.0f };
   cnt->size = { 1 };
+  cnt->expand = { true, true };
   add_child(vbox, cnt);
 
   auto bot_nav = alloc();
+  top_nav->expand.x = true;
   bot_nav->layout = l::hbox;
 
   auto tab1 = alloc();
   tab1->inst.colour = { 1, 1, 0, 1 };
   tab1->size = { 1 };
+  tab1->expand.x = true;
   add_child(bot_nav, tab1);
 
   auto tab2 = alloc();
   tab2->inst.colour = { 1, 0, 1, 1 };
   tab2->size = { 1 };
+  tab2->expand.x = true;
   add_child(bot_nav, tab2);
 
   auto tab3 = alloc();
   tab3->inst.colour = { 0, 1, 1, 1 };
   tab3->size = { 1 };
+  tab3->expand.x = true;
   add_child(bot_nav, tab3);
 
   auto tab4 = alloc();
   tab4->inst.colour = { 0, 0, 0, 1 };
   tab4->size = { 1 };
+  tab4->expand.x = true;
   add_child(bot_nav, tab4);
 
   auto tab5 = alloc();
   tab5->inst.colour = { 1, 1, 1, 1 };
   tab5->size = { 1 };
+  tab5->expand.x = true;
   add_child(bot_nav, tab5);
 
   add_child(vbox, bot_nav);
