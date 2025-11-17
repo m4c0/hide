@@ -1,4 +1,4 @@
-#pragma leco app
+//#pragma leco app
 #pragma leco add_shader "poc-imm.frag"
 #pragma leco add_shader "poc-imm.vert"
 #pragma leco add_resource "BrainF.png"

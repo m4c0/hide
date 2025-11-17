@@ -92,23 +92,34 @@ struct widget {
   inst inst {};
   dotz::vec2 size {};
 
-  void (*layout)(widget *);
+  void (*layout)(widget *) = nullptr;
 
-  hai::varray<widget *> children { 128 };
+  widget * children = nullptr;
+  widget * last_child = nullptr;
+
+  widget * next = nullptr;
 };
+static void add_child(widget * parent, widget * child) {
+  if (!parent->children) {
+    parent->children = parent->last_child = child;
+    return;
+  }
+  parent->last_child->next = child;
+  parent->last_child = child;
+}
 static void layout(widget * node) {
-  for (auto c : node->children) layout(c);
+  for (auto c = node->children; c; c = c->next) layout(c);
 
   if (node->layout) node->layout(node);
 }
 static void tr(widget * node, dotz::vec2 delta) {
-  for (auto c : node->children) tr(c, delta);
+  for (auto c = node->children; c; c = c->next) tr(c, delta);
   node->inst.pos = node->inst.pos + delta;
 }
 namespace l {
   static void hbox(widget * node) {
     float x = 0;
-    for (auto c : node->children) {
+    for (auto c = node->children; c; c = c->next) {
       tr(c, { x, 0.f });
       x += c->size.x;
       node->size.y = dotz::max(node->size.y, c->size.y);
@@ -117,7 +128,7 @@ namespace l {
   }
   static void vbox(widget * node) {
     float y = 0;
-    for (auto c : node->children) {
+    for (auto c = node->children; c; c = c->next) {
       tr(c, { 0.f, y });
       y += c->size.y;
       node->size.x = dotz::max(node->size.x, c->size.x);
@@ -126,9 +137,9 @@ namespace l {
   }
 }
 static void render(voo::memiter<inst> & m, widget * node) {
-  if (node->children.size() == 0) m += node->inst;
+  if (!node->children) m += node->inst;
 
-  for (auto c : node->children) render(m, c);
+  for (auto c = node->children; c; c = c->next) render(m, c);
 }
 
 static void run(voo::memiter<inst> & m) {
@@ -149,24 +160,24 @@ static void run(voo::memiter<inst> & m) {
   auto lt_btn = alloc();
   lt_btn->inst.colour = { 1, 0, 0, 1 };
   lt_btn->size = { 1 };
-  top_nav->children.push_back(lt_btn);
+  add_child(top_nav, lt_btn);
 
   auto title = alloc();
   title->inst.colour = { 0, 1, 0, 1 };
   title->size = { 1 };
-  top_nav->children.push_back(title);
+  add_child(top_nav, title);
 
   auto rt_btn = alloc();
   rt_btn->inst.colour = { 0, 0, 1, 1 };
   rt_btn->size = { 1 };
-  top_nav->children.push_back(rt_btn);
+  add_child(top_nav, rt_btn);
 
-  vbox->children.push_back(top_nav);
+  add_child(vbox, top_nav);
 
   auto cnt = alloc();
   cnt->inst.colour = { 0.5f, 0.5f, 0.5f, 1.0f };
   cnt->size = { 1 };
-  vbox->children.push_back(cnt);
+  add_child(vbox, cnt);
 
   auto bot_nav = alloc();
   bot_nav->layout = l::hbox;
@@ -174,29 +185,29 @@ static void run(voo::memiter<inst> & m) {
   auto tab1 = alloc();
   tab1->inst.colour = { 1, 1, 0, 1 };
   tab1->size = { 1 };
-  bot_nav->children.push_back(tab1);
+  add_child(bot_nav, tab1);
 
   auto tab2 = alloc();
   tab2->inst.colour = { 1, 0, 1, 1 };
   tab2->size = { 1 };
-  bot_nav->children.push_back(tab2);
+  add_child(bot_nav, tab2);
 
   auto tab3 = alloc();
   tab3->inst.colour = { 0, 1, 1, 1 };
   tab3->size = { 1 };
-  bot_nav->children.push_back(tab3);
+  add_child(bot_nav, tab3);
 
   auto tab4 = alloc();
   tab4->inst.colour = { 0, 0, 0, 1 };
   tab4->size = { 1 };
-  bot_nav->children.push_back(tab4);
+  add_child(bot_nav, tab4);
 
   auto tab5 = alloc();
   tab5->inst.colour = { 1, 1, 1, 1 };
   tab5->size = { 1 };
-  bot_nav->children.push_back(tab5);
+  add_child(bot_nav, tab5);
 
-  vbox->children.push_back(bot_nav);
+  add_child(vbox, bot_nav);
 
   layout(vbox);
   render(m, vbox);
