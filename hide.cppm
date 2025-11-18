@@ -11,6 +11,13 @@ import hai;
 import hay;
 import sv;
 
+export namespace hide::commands {
+  using clip = mu_ClipCommand;
+  using icon = mu_IconCommand;
+  using rect = mu_RectCommand;
+  using text = mu_TextCommand;
+}
+
 namespace hide {
   export hai::fn<int, sv> text_width = [](auto) { return 0; };
   export hai::fn<int> text_height = [] { return 0; };
@@ -45,5 +52,31 @@ namespace hide {
     return hay<int, mu_begin_window_ex, [](int b) {
       if (b) mu_end_window(context());
     }> { context(), "", rect, opts };
+  }
+
+  export void for_each_command(auto && fn) {
+    mu_Command * cmd {};
+    while (mu_next_command(context(), &cmd)) {
+      switch (cmd->type) {
+        case MU_COMMAND_CLIP: fn(cmd->clip); break;
+        case MU_COMMAND_ICON: fn(cmd->icon); break;
+        case MU_COMMAND_RECT: fn(cmd->rect); break;
+        case MU_COMMAND_TEXT: fn(cmd->text); break;
+      }
+    }
+  }
+  export void for_each_command(auto && clip, auto && icon, auto && rect, auto && text) {
+    using C = traits::decay_t<decltype(clip)>;
+    using I = traits::decay_t<decltype(icon)>;
+    using R = traits::decay_t<decltype(rect)>;
+    using T = traits::decay_t<decltype(text)>;
+
+    struct t : C, I, R, T {
+      using C::operator();
+      using I::operator();
+      using R::operator();
+      using T::operator();
+    } t { clip, icon, rect, text };
+    for_each_command(t);
   }
 }

@@ -36,36 +36,20 @@ struct inst {
 };
 
 void draw_ui(voo::memiter<inst> * m) {
-  auto ctx = hide::context();
-  mu_Command * cmd {};
-  while (mu_next_command(ctx, &cmd)) {
-    switch (cmd->type) {
-      case MU_COMMAND_CLIP: {
-        //auto [x, y, w, h] = cmd->clip.rect;
-        //putan("clip", x, y, w, h);
-        break;
-      }
-      case MU_COMMAND_ICON: {
-        //auto [x, y, w, h] = cmd->icon.rect;
-        //putan("icon", cmd->icon.id, x, y, w, h);
-        break;
-      }
-      case MU_COMMAND_RECT: {
-        auto [x, y, w, h] = cmd->rect.rect;
-        auto [r, g, b, a] = cmd->rect.color;
+  hide::for_each_command(
+      [&](hide::commands::clip cmd) {},
+      [&](hide::commands::icon cmd) {},
+      [&](hide::commands::rect cmd) {
+        auto [x, y, w, h] = cmd.rect;
+        auto [r, g, b, a] = cmd.color;
         *m += inst {
           .pos { x, y },
           .size { w, h },
           .colour = dotz::vec4 { r, g, b, a } / 255.0,
         };
-        break;
-      }
-      case MU_COMMAND_TEXT:
-        //putan("text", cmd->text.pos.x, cmd->text.pos.y, cmd->text.str);
-        break;
-      default: break;
-    }
-  }
+      },
+      [&](hide::commands::text cmd) {}
+      );
 }
 
 struct as {
