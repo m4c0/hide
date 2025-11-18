@@ -15,13 +15,6 @@ extern "C" {
 #include "microui/src/microui.h"
 }
 
-static int text_width(mu_Font, const char *, int len) {
-  return 5 * len;
-}
-static int text_height(mu_Font) {
-  return 8;
-}
-
 void do_ui() {
   auto ctx = hide::block();
 
@@ -152,9 +145,8 @@ static void on_frame() {
 }
 
 const int i = [] {
-  auto ctx = hide::context();
-  ctx->text_width = text_width;
-  ctx->text_height = text_height;
+  hide::text_width = [](auto str) -> int { return 5 * str.size(); };
+  hide::text_height = [] { return 8; };
 
   using namespace vinyl;
   on(START, [] { gas.reset(new as {}); });
