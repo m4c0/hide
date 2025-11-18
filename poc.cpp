@@ -17,24 +17,16 @@ extern "C" {
 
 void do_ui() {
   auto ctx = hide::block();
+  auto end = hide::window({ 10 }, { 380 });
 
-  auto wnd_rect = mu_rect(10, 10, 380, 380);
-  //auto wnd_opts = MU_OPT_NOCLOSE | MU_OPT_NOTITLE;
-  auto wnd_opts = 0;
-  if (mu_begin_window_ex(ctx, "Window", wnd_rect, wnd_opts)) {
-    int cols[] { 100, 100 };
-    mu_layout_row(ctx, 2, cols, 0);
+  int cols[] { 100, 100 };
+  mu_layout_row(ctx, 2, cols, 0);
 
-    mu_text(ctx, "One");
-    if (mu_button(ctx, "Hello")) putln("hello");
+  mu_text(ctx, "One");
+  if (mu_button(ctx, "Hello")) putln("hello");
 
-    mu_text(ctx, "Two");
-    if (mu_button(ctx, "World")) putln("world");
-
-    mu_end_window(ctx);
-  }
-
-  mu_end(ctx);
+  mu_text(ctx, "Two");
+  if (mu_button(ctx, "World")) putln("world");
 }
 
 struct inst {

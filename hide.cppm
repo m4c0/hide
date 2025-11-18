@@ -6,6 +6,7 @@ extern "C" {
 }
 
 export module hide;
+import dotz;
 import hai;
 import hay;
 import sv;
@@ -36,5 +37,13 @@ namespace hide {
         return context();
       },
       mu_end> {};
+  }
+
+  export auto window(dotz::vec2 pos, dotz::vec2 size) {
+    auto rect = mu_rect(pos.x, pos.y, size.x, size.y);
+    auto opts = MU_OPT_NOCLOSE | MU_OPT_NOTITLE;
+    return hay<int, mu_begin_window_ex, [](int b) {
+      if (b) mu_end_window(context());
+    }> { context(), "", rect, opts };
   }
 }
