@@ -72,13 +72,13 @@ void draw_ui(voo::memiter<inst> * m) {
   while (mu_next_command(ctx, &cmd)) {
     switch (cmd->type) {
       case MU_COMMAND_CLIP: {
-        auto [x, y, w, h] = cmd->clip.rect;
-        putan("clip", x, y, w, h);
+        //auto [x, y, w, h] = cmd->clip.rect;
+        //putan("clip", x, y, w, h);
         break;
       }
       case MU_COMMAND_ICON: {
-        auto [x, y, w, h] = cmd->icon.rect;
-        putan("icon", cmd->icon.id, x, y, w, h);
+        //auto [x, y, w, h] = cmd->icon.rect;
+        //putan("icon", cmd->icon.id, x, y, w, h);
         break;
       }
       case MU_COMMAND_RECT: {
@@ -92,11 +92,9 @@ void draw_ui(voo::memiter<inst> * m) {
         break;
       }
       case MU_COMMAND_TEXT:
-        putan("text", cmd->text.pos.x, cmd->text.pos.y, cmd->text.str);
+        //putan("text", cmd->text.pos.x, cmd->text.pos.y, cmd->text.str);
         break;
-      default:
-        putan("cmd", cmd->type);
-        break;
+      default: break;
     }
   }
 }
