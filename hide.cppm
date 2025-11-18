@@ -22,12 +22,17 @@ namespace hide::vulkan {
   }
 
   export class pipeline {
+    static constexpr const auto max_inst = 1024;
+
     vee::pipeline_layout m_pl = vee::create_pipeline_layout(vee::vertex_push_constant_range<upc>());
     vee::render_pass m_rp;
     vee::gr_pipeline m_gp;
 
+    voo::bound_buffer m_buf;
+    voo::one_quad m_quad;
+
   public:
-    pipeline(const vee::attachment_description & colour) :
+    pipeline(vee::physical_device pd, const vee::attachment_description & colour) :
       m_rp { vee::create_render_pass(vee::create_render_pass_params {
         .attachments {{ colour_attachment(colour) }},
         .subpasses {{
@@ -55,19 +60,38 @@ namespace hide::vulkan {
         vee::vertex_attribute_vec4(1, traits::offset_of(&inst::colour)),
       },
     }) }
+    , m_buf { voo::bound_buffer::create_from_host(pd, max_inst * sizeof(hide::vulkan::inst), vee::buffer_usage::vertex_buffer) }
+    , m_quad { pd }
     {}
 
-    void render(vee::command_buffer cb, vee::framebuffer::type fb, vee::extent ext,auto && fn) {
-      voo::cmd_render_pass rp { vee::render_pass_begin {
-        .command_buffer = cb,
-        .render_pass = *m_rp,
-        .framebuffer = fb,
-        .extent = ext,
-      }};
-      vee::cmd_set_scissor(cb, ext);
-      vee::cmd_set_viewport(cb, ext);
+    void render(vee::render_pass_begin rpb) {
+      unsigned count = 0;
+      voo::memiter<hide::vulkan::inst> m { *m_buf.memory, &count };
+      hide::for_each_command(
+          [&](hide::commands::clip cmd) {},
+          [&](hide::commands::icon cmd) {},
+          [&](hide::commands::rect cmd) {
+            auto [x, y, w, h] = cmd.rect;
+            auto [r, g, b, a] = cmd.color;
+            m += hide::vulkan::inst {
+              .pos { x, y },
+              .size { w, h },
+              .colour = dotz::vec4 { r, g, b, a } / 255.0,
+            };
+          },
+          [&](hide::commands::text cmd) {}
+          );
+
+      auto cb = rpb.command_buffer;
+      rpb.render_pass = *m_rp;
+
+      voo::cmd_render_pass rp { rpb };
+      vee::cmd_set_scissor(cb, rpb.extent);
+      vee::cmd_set_viewport(cb, rpb.extent);
       vee::cmd_bind_gr_pipeline(cb, *m_gp);
-      fn();
+      vee::cmd_bind_vertex_buffers(cb, 1, *m_buf.buffer);
+
+      m_quad.run(cb, 0, count);
     }
   };
 }

@@ -29,26 +29,7 @@ void do_ui() {
   if (mu_button(ctx, "World")) putln("world");
 }
 
-void draw_ui(voo::memiter<hide::vulkan::inst> * m) {
-  hide::for_each_command(
-      [&](hide::commands::clip cmd) {},
-      [&](hide::commands::icon cmd) {},
-      [&](hide::commands::rect cmd) {
-        auto [x, y, w, h] = cmd.rect;
-        auto [r, g, b, a] = cmd.color;
-        *m += hide::vulkan::inst {
-          .pos { x, y },
-          .size { w, h },
-          .colour = dotz::vec4 { r, g, b, a } / 255.0,
-        };
-      },
-      [&](hide::commands::text cmd) {}
-      );
-}
-
 struct as {
-  static constexpr const auto max_inst = 1024;
-
   voo::device_and_queue dq { "poc-microui", casein::native_ptr };
   vee::render_pass rp = vee::create_render_pass(vee::create_render_pass_params {
     .attachments {{
@@ -64,19 +45,13 @@ struct as {
     }},
     .dependencies {{ vee::create_colour_dependency() }},
   });
-
-  voo::bound_buffer buf = voo::bound_buffer::create_from_host(
-      dq.physical_device(), max_inst * sizeof(hide::vulkan::inst),
-      vee::buffer_usage::vertex_buffer);
-
-  voo::one_quad quad { dq.physical_device() };
 };
 hai::uptr<as> gas {};
 
 struct ss {
   voo::swapchain_and_stuff sw { gas->dq, *gas->rp };
 
-  hide::vulkan::pipeline ppl {{
+  hide::vulkan::pipeline ppl { gas->dq.physical_device(), {
     .format = gas->dq.find_best_surface_image_format(),
     .initial_layout = vee::image_layout_attachment_optimal,
     .final_layout = vee::image_layout_present_src_khr,
@@ -84,32 +59,19 @@ struct ss {
 };
 hai::uptr<ss> gss {};
 
-static unsigned map() {
-  unsigned count = 0;
-  voo::memiter<hide::vulkan::inst> m { *gas->buf.memory, &count };
-
-  do_ui();
-  draw_ui(&m);
-  return count;
-}
-
 static void on_frame() {
   if (!gss) gss.reset(new ss {});
 
-  auto count = map();
+  do_ui();
 
   gss->sw.acquire_next_image();
   gss->sw.queue_one_time_submit(gas->dq.queue(), [&] {
-    auto cb = gss->sw.command_buffer();
     {
       auto rp = gss->sw.cmd_render_pass({
         .clear_colours { vee::clear_colour(0.01f, 0.02f, 0.03f, 1.0f) },
       });
     }
-    gss->ppl.render(cb, gss->sw.framebuffer(), gss->sw.extent(),[&] {
-      vee::cmd_bind_vertex_buffers(cb, 1, *gas->buf.buffer);
-      gas->quad.run(cb, 0, count);
-    });
+    gss->ppl.render(gss->sw.render_pass_begin());
   });
   gss->sw.queue_present(gas->dq.queue());
 }
