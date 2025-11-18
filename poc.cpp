@@ -23,11 +23,7 @@ static int text_height(mu_Font) {
 }
 
 void do_ui() {
-  auto ctx = hide::context();
-  ctx->text_width = text_width;
-  ctx->text_height = text_height;
-
-  mu_begin(ctx);
+  auto ctx = hide::block();
 
   auto wnd_rect = mu_rect(10, 10, 380, 380);
   //auto wnd_opts = MU_OPT_NOCLOSE | MU_OPT_NOTITLE;
@@ -131,6 +127,7 @@ hai::uptr<ss> gss {};
 static unsigned map() {
   unsigned count = 0;
   voo::memiter<inst> m { *gas->buf.memory, &count };
+
   do_ui();
   draw_ui(&m);
   return count;
@@ -155,6 +152,10 @@ static void on_frame() {
 }
 
 const int i = [] {
+  auto ctx = hide::context();
+  ctx->text_width = text_width;
+  ctx->text_height = text_height;
+
   using namespace vinyl;
   on(START, [] { gas.reset(new as {}); });
   on(STOP, [] { gss = {}; gas = {}; });

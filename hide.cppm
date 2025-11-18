@@ -17,4 +17,13 @@ namespace hide {
     }();
     return ctx;
   }
+
+  export auto block() {
+    return hay<mu_Context *,
+      [] {
+        mu_begin(context());
+        return context();
+      },
+      mu_end> {};
+  }
 }
