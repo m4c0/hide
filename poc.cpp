@@ -1,5 +1,4 @@
 #pragma leco app
-#pragma leco add_impl microui
 #pragma leco add_shader "poc.vert"
 #pragma leco add_shader "poc.frag"
 
@@ -7,21 +6,13 @@ import casein;
 import dotz;
 import hai;
 import hay;
+import hide;
 import print;
 import vinyl;
 import voo;
 
 extern "C" {
 #include "microui/src/microui.h"
-}
-
-static auto init() {
-  auto ctx = new mu_Context {};
-  mu_init(ctx);
-  return ctx;
-}
-static auto deinit(mu_Context * ptr) {
-  delete ptr;
 }
 
 static int text_width(mu_Font, const char *, int len) {
@@ -31,15 +22,11 @@ static int text_height(mu_Font) {
   return 8;
 }
 
-static auto ctx = [] {
-  hay<mu_Context *, init, deinit> ctx {}; 
+void do_ui() {
+  auto ctx = hide::context();
   ctx->text_width = text_width;
   ctx->text_height = text_height;
 
-  return ctx;
-}();
-
-void do_ui() {
   mu_begin(ctx);
 
   auto wnd_rect = mu_rect(10, 10, 380, 380);
@@ -68,6 +55,7 @@ struct inst {
 };
 
 void draw_ui(voo::memiter<inst> * m) {
+  auto ctx = hide::context();
   mu_Command * cmd {};
   while (mu_next_command(ctx, &cmd)) {
     switch (cmd->type) {
