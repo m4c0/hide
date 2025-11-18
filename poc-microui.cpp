@@ -42,7 +42,7 @@ static auto ctx = [] {
 void do_ui() {
   mu_begin(ctx);
 
-  auto wnd_rect = mu_rect(10, 10, 300, 400);
+  auto wnd_rect = mu_rect(10, 10, 380, 380);
   //auto wnd_opts = MU_OPT_NOCLOSE | MU_OPT_NOTITLE;
   auto wnd_opts = 0;
   if (mu_begin_window_ex(ctx, "Window", wnd_rect, wnd_opts)) {
@@ -59,7 +59,15 @@ void do_ui() {
   }
 
   mu_end(ctx);
+}
 
+struct inst {
+  dotz::vec2 pos;
+  dotz::vec2 size;
+  dotz::vec4 colour;
+};
+
+void draw_ui(voo::memiter<inst> * m) {
   mu_Command * cmd {};
   while (mu_next_command(ctx, &cmd)) {
     switch (cmd->type) {
@@ -75,7 +83,12 @@ void do_ui() {
       }
       case MU_COMMAND_RECT: {
         auto [x, y, w, h] = cmd->rect.rect;
-        putan("rect", x, y, w, h);
+        auto [r, g, b, a] = cmd->rect.color;
+        *m += inst {
+          .pos { x, y },
+          .size { w, h },
+          .colour = dotz::vec4 { r, g, b, a } / 255.0,
+        };
         break;
       }
       case MU_COMMAND_TEXT:
@@ -87,11 +100,6 @@ void do_ui() {
     }
   }
 }
-
-struct inst {
-  dotz::vec2 pos;
-  dotz::vec4 colour;
-};
 
 struct as {
   static constexpr const auto max_inst = 1024;
@@ -127,6 +135,7 @@ struct ss {
     .attributes {
       vee::vertex_attribute_vec2(0, 0),
       vee::vertex_attribute_vec2(1, traits::offset_of(&inst::pos)),
+      vee::vertex_attribute_vec2(1, traits::offset_of(&inst::size)),
       vee::vertex_attribute_vec4(1, traits::offset_of(&inst::colour)),
     },
   });
@@ -137,6 +146,7 @@ static unsigned map() {
   unsigned count = 0;
   voo::memiter<inst> m { *gas->buf.memory, &count };
   do_ui();
+  draw_ui(&m);
   return count;
 }
 
