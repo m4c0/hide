@@ -1,7 +1,7 @@
 #pragma leco app
 #pragma leco add_impl microui
-#pragma leco add_shader "poc-2.vert"
-#pragma leco add_shader "poc-2.frag"
+#pragma leco add_shader "poc.vert"
+#pragma leco add_shader "poc.frag"
 
 import casein;
 import dotz;
@@ -123,8 +123,8 @@ struct ss {
     .render_pass = *gas->rp,
     .extent = sw.extent(),
     .shaders {
-      voo::shader { "poc-2.vert.spv" }.pipeline_vert_stage("main", vee::specialisation_info<float>(0, sw.aspect())),
-      voo::shader { "poc-2.frag.spv" }.pipeline_frag_stage("main"),
+      voo::shader { "poc.vert.spv" }.pipeline_vert_stage("main", vee::specialisation_info<float>(0, sw.aspect())),
+      voo::shader { "poc.frag.spv" }.pipeline_frag_stage("main"),
     },
     .bindings {
       vee::vertex_input_bind(sizeof(dotz::vec2)),
