@@ -3,6 +3,7 @@
 
 export module hide;
 export import :microui;
+import silog;
 import voo;
 
 namespace hide::vulkan {
@@ -77,7 +78,12 @@ namespace hide::vulkan {
       unsigned count = 0;
       voo::memiter<hide::vulkan::inst> m { *m_buf.memory, &count };
       hide::for_each_command(
-          [&](hide::commands::clip cmd) {},
+          [&](hide::commands::clip cmd) {
+            static bool logged = false;
+            if (logged) return;
+            silog::log(silog::info, "clipped !!!!!!!!!!!!!!!!!!!!!!!");
+            logged = true;
+          },
           [&](hide::commands::icon cmd) {},
           [&](hide::commands::rect cmd) {
             auto [x, y, w, h] = cmd.rect;
