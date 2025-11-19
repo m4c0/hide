@@ -17,5 +17,5 @@ void main() {
   vec2 p = (ipos + pos * size - 200) / (vec2(aspect, 1) * 200);
   gl_Position = vec4(p, 0, 1);
   f_colour = pow(colour, vec4(2.2));
-  f_uv = uv + pos;
+  f_uv = (uv + pos / 16.0) * step(1e-9, length(uv));
 }

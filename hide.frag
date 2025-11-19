@@ -8,5 +8,6 @@ layout(location = 1) in vec2 f_uv;
 layout(location = 0) out vec4 colour;
 
 void main() {
-  colour = f_colour;
+  float a = mix(1, texture(tex, f_uv).r, step(1e-9, length(f_uv)));
+  colour = f_colour * a;
 }
