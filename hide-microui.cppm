@@ -80,3 +80,15 @@ namespace hide {
     for_each_command(t);
   }
 }
+
+export namespace hide::mu {
+  inline bool button(const char * str) {
+    return mu_button(context(), str);
+  }
+  inline void layout_row(hai::view<int> widths, int height) {
+    mu_layout_row(context(), widths.size(), widths.begin(), height);
+  }
+  inline void text(const char * str) {
+    mu_text(context(), str);
+  }
+}

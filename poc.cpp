@@ -11,22 +11,19 @@ import print;
 import vinyl;
 import voo;
 
-extern "C" {
-#include "microui/src/microui.h"
-}
-
 void do_ui() {
-  auto ctx = hide::block();
-  auto end = hide::window({ 10 }, { 380 });
+  using namespace hide;
 
-  int cols[] { 100, 100 };
-  mu_layout_row(ctx, 2, cols, 0);
+  auto ctx = block();
+  auto wnd = window({ 10 }, { 380 });
 
-  mu_text(ctx, "One");
-  if (mu_button(ctx, "Hello")) putln("hello");
+  mu::layout_row({ 100, 100 }, 0);
 
-  mu_text(ctx, "Two");
-  if (mu_button(ctx, "World")) putln("world");
+  mu::text("One");
+  if (mu::button("Hello")) putln("hello");
+
+  mu::text("Two");
+  if (mu::button("World")) putln("world");
 }
 
 struct as {
