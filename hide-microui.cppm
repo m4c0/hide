@@ -19,8 +19,10 @@ export namespace hide::commands {
 }
 
 namespace hide {
-  export hai::fn<int, sv> text_width = [](auto) { return 0; };
   export hai::fn<int> text_height = [] { return 0; };
+  export hai::fn<int, sv> text_width = [](auto str) -> int {
+    return str.size() * text_height();
+  };
 
   export mu_Context * context() {
     static auto ctx = [] {

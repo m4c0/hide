@@ -75,7 +75,6 @@ static void on_frame() {
 }
 
 const int i = [] {
-  hide::text_width = [](auto str) -> int { return 16 * str.size(); };
   hide::text_height = [] { return 16; };
 
   using namespace vinyl;
