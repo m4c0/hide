@@ -94,8 +94,19 @@ namespace hide::vulkan {
               .colour = dotz::vec4 { r, g, b, a } / 255.0,
             };
           },
-          [&](hide::commands::text cmd) {}
-          );
+          [&](hide::commands::text cmd) {
+            auto [x, y] = cmd.pos;
+            auto [r, g, b, a] = cmd.color;
+            auto h = text_height();
+            for (const auto * p = cmd.str; *p; p++) {
+              m += hide::vulkan::inst {
+                .pos { x, y },
+                .size { h },
+                .colour = dotz::vec4 { r, g, b, a } / 255.0,
+              };
+              x += h;
+            }
+          });
 
       m_quad.run(cb, 0, count);
     }
