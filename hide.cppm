@@ -103,7 +103,7 @@ namespace hide::vulkan {
               .colour = dotz::vec4 { r, g, b, a } / 255.0,
             };
           },
-          [&](hide::commands::text cmd) {
+          [&](const hide::commands::text & cmd) {
             auto [x, y] = cmd.pos;
             auto [r, g, b, a] = cmd.color;
             auto h = text_height();
