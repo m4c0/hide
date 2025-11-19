@@ -65,6 +65,15 @@ namespace hide::vulkan {
     {}
 
     void render(vee::render_pass_begin rpb) {
+      auto cb = rpb.command_buffer;
+      rpb.render_pass = *m_rp;
+
+      voo::cmd_render_pass rp { rpb };
+      vee::cmd_set_scissor(cb, rpb.extent);
+      vee::cmd_set_viewport(cb, rpb.extent);
+      vee::cmd_bind_gr_pipeline(cb, *m_gp);
+      vee::cmd_bind_vertex_buffers(cb, 1, *m_buf.buffer);
+
       unsigned count = 0;
       voo::memiter<hide::vulkan::inst> m { *m_buf.memory, &count };
       hide::for_each_command(
@@ -81,15 +90,6 @@ namespace hide::vulkan {
           },
           [&](hide::commands::text cmd) {}
           );
-
-      auto cb = rpb.command_buffer;
-      rpb.render_pass = *m_rp;
-
-      voo::cmd_render_pass rp { rpb };
-      vee::cmd_set_scissor(cb, rpb.extent);
-      vee::cmd_set_viewport(cb, rpb.extent);
-      vee::cmd_bind_gr_pipeline(cb, *m_gp);
-      vee::cmd_bind_vertex_buffers(cb, 1, *m_buf.buffer);
 
       m_quad.run(cb, 0, count);
     }
