@@ -10,6 +10,7 @@ namespace hide::vulkan {
   export struct inst {
     dotz::vec2 pos;
     dotz::vec2 size;
+    dotz::vec2 uv {};
     dotz::vec4 colour;
   };
 
@@ -63,6 +64,7 @@ namespace hide::vulkan {
         vee::vertex_attribute_vec2(0, 0),
         vee::vertex_attribute_vec2(1, traits::offset_of(&inst::pos)),
         vee::vertex_attribute_vec2(1, traits::offset_of(&inst::size)),
+        vee::vertex_attribute_vec2(1, traits::offset_of(&inst::uv)),
         vee::vertex_attribute_vec4(1, traits::offset_of(&inst::colour)),
       },
     }) }
@@ -123,9 +125,12 @@ namespace hide::vulkan {
             auto [r, g, b, a] = cmd.color;
             auto h = text_height();
             for (const auto * p = cmd.str; *p; p++) {
+              float u = static_cast<float>(*p % 16) / 16;
+              float v = static_cast<float>(*p / 16) / 16;
               m += hide::vulkan::inst {
                 .pos { x, y },
                 .size { h },
+                .uv { u, v },
                 .colour = dotz::vec4 { r, g, b, a } / 255.0,
               };
               x += h;
