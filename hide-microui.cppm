@@ -29,7 +29,8 @@ namespace hide {
       hay<mu_Context *> ctx { new mu_Context {} }; 
       mu_init(ctx);
       ctx->text_width = [](mu_Font, const char * str, int len) {
-        return text_width(sv { str, static_cast<unsigned>(len) });
+        sv s = (len == -1) ? sv::unsafe(str) : sv { str, static_cast<unsigned>(len) };
+        return text_width(s);
       };
       ctx->text_height = [](mu_Font) {
         return text_height();
