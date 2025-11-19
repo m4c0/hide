@@ -78,12 +78,17 @@ namespace hide::vulkan {
       auto cb = rpb.command_buffer;
       rpb.render_pass = *m_rp;
 
+      upc pc {
+        .aspect = static_cast<float>(rpb.extent.width) / static_cast<float>(rpb.extent.height)
+      };
+
       voo::cmd_render_pass rp { rpb };
       vee::cmd_set_scissor(cb, rpb.extent);
       vee::cmd_set_viewport(cb, rpb.extent);
       vee::cmd_bind_gr_pipeline(cb, *m_gp);
       vee::cmd_bind_vertex_buffers(cb, 1, *m_buf.buffer);
       vee::cmd_bind_descriptor_set(cb, *m_pl, 0, m_dset.descriptor_set());
+      vee::cmd_push_vertex_constants(cb, *m_pl, &pc);
 
       unsigned count = 0;
       voo::memiter<hide::vulkan::inst> m { *m_buf.memory, &count };
