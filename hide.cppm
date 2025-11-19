@@ -52,8 +52,8 @@ namespace hide::vulkan {
       .pipeline_layout = *m_pl,
       .render_pass = *m_rp,
       .shaders {
-        voo::shader { "poc.vert.spv" }.pipeline_vert_stage("main"),
-        voo::shader { "poc.frag.spv" }.pipeline_frag_stage("main"),
+        voo::shader { "hide.vert.spv" }.pipeline_vert_stage("main"),
+        voo::shader { "hide.frag.spv" }.pipeline_frag_stage("main"),
       },
       .bindings {
         vee::vertex_input_bind(sizeof(dotz::vec2)),
