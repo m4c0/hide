@@ -36,7 +36,7 @@ namespace hide::vulkan {
     voo::one_quad m_quad;
 
     voo::bound_image m_img {};
-    vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
+    vee::sampler m_smp = vee::create_sampler(vee::nearest_sampler);
 
   public:
     pipeline(vee::physical_device pd, const vee::attachment_description & colour) :
