@@ -1,6 +1,7 @@
 #pragma leco app
 #pragma leco add_shader "poc.vert"
 #pragma leco add_shader "poc.frag"
+#pragma leco add_resource "dungeon-437.png"
 
 import casein;
 import dotz;
@@ -74,8 +75,8 @@ static void on_frame() {
 }
 
 const int i = [] {
-  hide::text_width = [](auto str) -> int { return 5 * str.size(); };
-  hide::text_height = [] { return 8; };
+  hide::text_width = [](auto str) -> int { return 16 * str.size(); };
+  hide::text_height = [] { return 16; };
 
   using namespace vinyl;
   on(START, [] { gas.reset(new as {}); });
