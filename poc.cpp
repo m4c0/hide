@@ -9,6 +9,7 @@ import hai;
 import hay;
 import hide;
 import print;
+import sv;
 import vinyl;
 import voo;
 
@@ -75,6 +76,7 @@ static void on_frame() {
 }
 
 const int i = [] {
+  hide::font_name = [] { return "dungeon-437.png"_sv; };
   hide::text_height = [] { return 16; };
 
   using namespace vinyl;

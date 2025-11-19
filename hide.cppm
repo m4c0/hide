@@ -25,12 +25,17 @@ namespace hide::vulkan {
   export class pipeline {
     static constexpr const auto max_inst = 1024;
 
-    vee::pipeline_layout m_pl = vee::create_pipeline_layout(vee::vertex_push_constant_range<upc>());
+    voo::single_frag_dset m_dset { 1 };
+
+    vee::pipeline_layout m_pl = vee::create_pipeline_layout(m_dset.descriptor_set_layout(), vee::vertex_push_constant_range<upc>());
     vee::render_pass m_rp;
     vee::gr_pipeline m_gp;
 
     voo::bound_buffer m_buf;
     voo::one_quad m_quad;
+
+    voo::bound_image m_img {};
+    vee::sampler m_smp = vee::create_sampler(vee::linear_sampler);
 
   public:
     pipeline(vee::physical_device pd, const vee::attachment_description & colour) :
@@ -63,7 +68,11 @@ namespace hide::vulkan {
     }) }
     , m_buf { voo::bound_buffer::create_from_host(pd, max_inst * sizeof(hide::vulkan::inst), vee::buffer_usage::vertex_buffer) }
     , m_quad { pd }
-    {}
+    {
+      voo::load_image(font_name(), pd, voo::queue::instance(), &m_img, [this](auto sz) {
+        vee::update_descriptor_set(m_dset.descriptor_set(), 0, *m_img.iv, *m_smp);
+      });
+    }
 
     void render(vee::render_pass_begin rpb) {
       auto cb = rpb.command_buffer;
@@ -74,6 +83,7 @@ namespace hide::vulkan {
       vee::cmd_set_viewport(cb, rpb.extent);
       vee::cmd_bind_gr_pipeline(cb, *m_gp);
       vee::cmd_bind_vertex_buffers(cb, 1, *m_buf.buffer);
+      vee::cmd_bind_descriptor_set(cb, *m_pl, 0, m_dset.descriptor_set());
 
       unsigned count = 0;
       voo::memiter<hide::vulkan::inst> m { *m_buf.memory, &count };
