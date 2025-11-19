@@ -84,7 +84,16 @@ namespace hide::vulkan {
             silog::log(silog::info, "clipped !!!!!!!!!!!!!!!!!!!!!!!");
             logged = true;
           },
-          [&](hide::commands::icon cmd) {},
+          [&](hide::commands::icon cmd) {
+            auto [x, y, w, h] = cmd.rect;
+            auto [r, g, b, a] = cmd.color;
+            // TODO: actually draw the icon
+            m += hide::vulkan::inst {
+              .pos { x, y },
+              .size { w, h },
+              .colour = dotz::vec4 { r, g, b, a } / 255.0,
+            };
+          },
           [&](hide::commands::rect cmd) {
             auto [x, y, w, h] = cmd.rect;
             auto [r, g, b, a] = cmd.color;
