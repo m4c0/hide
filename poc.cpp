@@ -80,6 +80,8 @@ static void on_frame() {
   };
 
   unsigned count = 0;
+  unsigned n0 = 0;
+  unsigned n1 = 0;
   {
     voo::memiter<inst> m { *g.as()->buf.memory, &count };
     m += {
@@ -103,6 +105,7 @@ static void on_frame() {
       .size { w, h - 2.f },
       .colour { 0.2f },
     };
+    n0 = count;
     for (auto y = 0.5f; y < h + 1; y += 1.5f) {
       m += {
         .pos { 1.f, y },
@@ -110,6 +113,7 @@ static void on_frame() {
         .colour { 0.2f, 0.5f, 0.8f, 1.0f },
       };
     }
+    n1 = count;
 
     m += {
       .pos { 0.f, h - 1.f },
@@ -143,7 +147,9 @@ static void on_frame() {
   vee::cmd_bind_gr_pipeline(cb, *g.ss()->gp);
   vee::cmd_bind_vertex_buffers(cb, 1, *g.as()->buf.buffer);
   vee::cmd_push_vertex_constants(cb, *g.ss()->pl, &pc);
-  g.as()->quad.run(cb, 0, count);
+  g.as()->quad.run(cb, 0, n0);
+  g.as()->quad.run(cb, 0, n1 - n0, n0);
+  g.as()->quad.run(cb, 0, count - n1, n1);
 }
 
 const int i = [] {
