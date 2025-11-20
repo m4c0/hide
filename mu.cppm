@@ -71,7 +71,7 @@ namespace mu::vulkan {
     , m_buf { voo::bound_buffer::create_from_host(pd, max_inst * sizeof(inst), vee::buffer_usage::vertex_buffer) }
     , m_quad { pd }
     {
-      voo::load_image(font_name(), pd, voo::queue::universal(), &m_img, [this](auto sz) {
+      voo::load_image(font_name(), pd, &m_img, [this](auto sz) {
         vee::update_descriptor_set(m_dset.descriptor_set(), 0, *m_img.iv, *m_smp);
       });
     }
