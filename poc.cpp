@@ -51,7 +51,6 @@ struct ss {
   vee::gr_pipeline gp = vee::create_graphics_pipeline({
     .pipeline_layout = *pl,
     .render_pass = *rp,
-    .extent = sw.extent(),
     .shaders {
       voo::shader("poc.vert.spv").pipeline_vert_stage("main"),
       voo::shader("poc.frag.spv").pipeline_frag_stage("main"),
@@ -72,12 +71,15 @@ struct ss {
 static void on_frame() {
   auto cb = g.ss()->cb.cb();
   auto aspect = g.ss()->sw.aspect();
+  auto ext = g.ss()->sw.extent();
 
   auto h = 10.f;
   auto w = aspect * h;
   upc pc {
     .extent { w, h },
   };
+
+  auto bh = ext.height / h;
 
   unsigned count = 0;
   unsigned n0 = 0;
@@ -144,11 +146,21 @@ static void on_frame() {
 
   voo::ots_present_guard pg { &g.ss()->sw, cb };
   voo::cmd_render_pass rp { g.ss()->rpbs[g.ss()->sw.index()] };
+  vee::cmd_set_viewport(cb, ext);
   vee::cmd_bind_gr_pipeline(cb, *g.ss()->gp);
   vee::cmd_bind_vertex_buffers(cb, 1, *g.as()->buf.buffer);
   vee::cmd_push_vertex_constants(cb, *g.ss()->pl, &pc);
-  g.as()->quad.run(cb, 0, n0);
+
+  vee::cmd_set_scissor(cb, ext);
+  g.as()->quad.run(cb, 0, n0, 0);
+
+  vee::cmd_set_scissor(cb, {
+    { 0, static_cast<int>(bh) },
+    { ext.width, ext.height - static_cast<int>(bh * 2) }
+  });
   g.as()->quad.run(cb, 0, n1 - n0, n0);
+
+  vee::cmd_set_scissor(cb, ext);
   g.as()->quad.run(cb, 0, count - n1, n1);
 }
 
