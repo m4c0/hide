@@ -1,12 +1,12 @@
-#pragma leco add_shader "hide.vert"
-#pragma leco add_shader "hide.frag"
+#pragma leco add_shader "mu.vert"
+#pragma leco add_shader "mu.frag"
 
-export module hide;
-export import :microui;
+export module mu;
+export import :wrap;
 import silog;
 import voo;
 
-namespace hide::vulkan {
+namespace mu::vulkan {
   export struct inst {
     dotz::vec2 pos;
     dotz::vec2 size;
@@ -53,8 +53,8 @@ namespace hide::vulkan {
       .pipeline_layout = *m_pl,
       .render_pass = *m_rp,
       .shaders {
-        voo::shader { "hide.vert.spv" }.pipeline_vert_stage("main"),
-        voo::shader { "hide.frag.spv" }.pipeline_frag_stage("main"),
+        voo::shader { "mu.vert.spv" }.pipeline_vert_stage("main"),
+        voo::shader { "mu.frag.spv" }.pipeline_frag_stage("main"),
       },
       .bindings {
         vee::vertex_input_bind(sizeof(dotz::vec2)),
@@ -68,7 +68,7 @@ namespace hide::vulkan {
         vee::vertex_attribute_vec4(1, traits::offset_of(&inst::colour)),
       },
     }) }
-    , m_buf { voo::bound_buffer::create_from_host(pd, max_inst * sizeof(hide::vulkan::inst), vee::buffer_usage::vertex_buffer) }
+    , m_buf { voo::bound_buffer::create_from_host(pd, max_inst * sizeof(inst), vee::buffer_usage::vertex_buffer) }
     , m_quad { pd }
     {
       voo::load_image(font_name(), pd, voo::queue::instance(), &m_img, [this](auto sz) {
@@ -93,41 +93,41 @@ namespace hide::vulkan {
       vee::cmd_push_vertex_constants(cb, *m_pl, &pc);
 
       unsigned count = 0;
-      voo::memiter<hide::vulkan::inst> m { *m_buf.memory, &count };
-      hide::for_each_command(
-          [&](hide::commands::clip cmd) {
+      voo::memiter<inst> m { *m_buf.memory, &count };
+      mu::for_each_command(
+          [&](mu::commands::clip cmd) {
             static bool logged = false;
             if (logged) return;
             silog::log(silog::info, "clipped !!!!!!!!!!!!!!!!!!!!!!!");
             logged = true;
           },
-          [&](hide::commands::icon cmd) {
+          [&](mu::commands::icon cmd) {
             auto [x, y, w, h] = cmd.rect;
             auto [r, g, b, a] = cmd.color;
             // TODO: actually draw the icon
-            m += hide::vulkan::inst {
+            m += mu::vulkan::inst {
               .pos { x, y },
               .size { w, h },
               .colour = dotz::vec4 { r, g, b, a } / 255.0,
             };
           },
-          [&](hide::commands::rect cmd) {
+          [&](mu::commands::rect cmd) {
             auto [x, y, w, h] = cmd.rect;
             auto [r, g, b, a] = cmd.color;
-            m += hide::vulkan::inst {
+            m += mu::vulkan::inst {
               .pos { x, y },
               .size { w, h },
               .colour = dotz::vec4 { r, g, b, a } / 255.0,
             };
           },
-          [&](const hide::commands::text & cmd) {
+          [&](const mu::commands::text & cmd) {
             auto [x, y] = cmd.pos;
             auto [r, g, b, a] = cmd.color;
             auto h = text_height();
             for (const auto * p = cmd.str; *p; p++) {
               float u = static_cast<float>(*p % 16) / 16;
               float v = static_cast<float>(*p / 16) / 16;
-              m += hide::vulkan::inst {
+              m += mu::vulkan::inst {
                 .pos { x, y },
                 .size { h },
                 .uv { u, v },

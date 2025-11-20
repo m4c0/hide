@@ -5,25 +5,25 @@ import casein;
 import dotz;
 import hai;
 import hay;
-import hide;
+import mu;
 import print;
 import sv;
 import vinyl;
 import voo;
 
 void do_ui() {
-  using namespace hide;
+  using namespace mu;
 
   auto ctx = block();
   auto wnd = window({ 10 }, { 380 });
 
-  mu::layout_row({ 100, 100 }, 0);
+  compos::layout_row({ 100, 100 }, 0);
 
-  mu::text("One");
-  if (mu::button("Hello")) putln("hello");
+  compos::text("One");
+  if (compos::button("Hello")) putln("hello");
 
-  mu::text("Two");
-  if (mu::button("World")) putln("world");
+  compos::text("Two");
+  if (compos::button("World")) putln("world");
 }
 
 struct as {
@@ -48,7 +48,7 @@ hai::uptr<as> gas {};
 struct ss {
   voo::swapchain_and_stuff sw { gas->dq, *gas->rp };
 
-  hide::vulkan::pipeline ppl { gas->dq.physical_device(), {
+  mu::vulkan::pipeline ppl { gas->dq.physical_device(), {
     .format = gas->dq.find_best_surface_image_format(),
     .initial_layout = vee::image_layout_attachment_optimal,
     .final_layout = vee::image_layout_present_src_khr,
@@ -74,8 +74,8 @@ static void on_frame() {
 }
 
 const int i = [] {
-  hide::font_name = [] { return "dungeon-437.png"_sv; };
-  hide::text_height = [] { return 16; };
+  mu::font_name = [] { return "dungeon-437.png"_sv; };
+  mu::text_height = [] { return 16; };
 
   using namespace vinyl;
   on(START, [] { gas.reset(new as {}); });

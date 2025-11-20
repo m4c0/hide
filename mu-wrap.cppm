@@ -1,24 +1,24 @@
-#pragma leco add_impl microui
+#pragma leco add_impl mu-wrapper
 module;
 
 extern "C" {
 #include "microui/src/microui.h"
 }
 
-export module hide:microui;
+export module mu:wrap;
 import dotz;
 import hai;
 import hay;
 import sv;
 
-export namespace hide::commands {
+export namespace mu::commands {
   using clip = mu_ClipCommand;
   using icon = mu_IconCommand;
   using rect = mu_RectCommand;
   using text = mu_TextCommand;
 }
 
-namespace hide {
+namespace mu {
   export hai::fn<sv> font_name = [] { return sv {}; };
   export hai::fn<int> text_height = [] { return 0; };
   export hai::fn<int, sv> text_width = [](auto str) -> int {
@@ -85,7 +85,7 @@ namespace hide {
   }
 }
 
-export namespace hide::mu {
+export namespace mu::compos {
   inline bool button(const char * str) {
     return mu_button(context(), str);
   }
