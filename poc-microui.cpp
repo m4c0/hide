@@ -62,7 +62,7 @@ static void on_frame() {
   do_ui();
 
   gss->sw.acquire_next_image();
-  gss->sw.queue_one_time_submit(gas->dq.queue(), [&] {
+  gss->sw.queue_one_time_submit([&] {
     {
       auto rp = gss->sw.cmd_render_pass({
         .clear_colours { vee::clear_colour(0.01f, 0.02f, 0.03f, 1.0f) },
@@ -70,7 +70,7 @@ static void on_frame() {
     }
     gss->ppl.render(gss->sw.render_pass_begin());
   });
-  gss->sw.queue_present(gas->dq.queue());
+  gss->sw.queue_present();
 }
 
 const int i = [] {
