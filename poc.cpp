@@ -1,41 +1,34 @@
 #pragma leco app
 
 import casein;
-import hai;
 import vinyl;
 import voo;
+
+vinyl::v<struct as, struct ss> g;
 
 struct as {
   voo::device_and_queue dq { "poc", casein::native_ptr };
 };
-static hai::uptr<as> gas {};
-
 struct ss {
-  vee::render_pass rp = voo::single_att_render_pass(gas->dq);
-  voo::swapchain_and_stuff sw { gas->dq, *rp };
+  //vee::render_pass rp = voo::single_att_render_pass(g.as()->dq);
+  voo::swapchain sw { g.as()->dq };
+  voo::single_cb cb {};
 };
-static hai::uptr<ss> gss {};
 
 static void on_frame() {
-}
+  auto cb = g.ss()->cb.cb();
 
-static void setup() {
-  using namespace vinyl;
-
-  on(START,  [] { gas.reset(new as {}); });
-  on(RESIZE, [] { gss.reset(nullptr); });
-  on(FRAME,  [] {
-    if (!gss) gss.reset(new ss {});
-    on_frame();
-  });
-  on(STOP, [] {
-    gss.reset(nullptr);
-    gas.reset(nullptr);
-  });
+  g.ss()->sw.acquire_next_image();
+  {
+    voo::cmd_buf_one_time_submit ots { cb };
+  }
+  g.ss()->sw.queue_submit(cb);
+  g.ss()->sw.queue_present();
 }
 
 const int i = [] {
-  setup();
+  g.on_frame() = on_frame;
+  g.setup();
   return 0;
 }();
 
