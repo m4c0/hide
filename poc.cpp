@@ -97,11 +97,20 @@ static void on_frame() {
       .size { 1 },
       .colour { 0, 1, 0, 1 },
     };
+
     m += {
       .pos { 0, 1 },
       .size { w, h - 2.f },
       .colour { 0.2f },
     };
+    for (auto y = 0.5f; y < h + 1; y += 1.5f) {
+      m += {
+        .pos { 1.f, y },
+        .size { w - 2.f, 1.0f },
+        .colour { 0.2f, 0.5f, 0.8f, 1.0f },
+      };
+    }
+
     m += {
       .pos { 0.f, h - 1.f },
       .size { w / 5.0f, 1.f },
