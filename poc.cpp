@@ -11,6 +11,8 @@ import voo;
 static constexpr const auto max_inst = 10240;
 struct inst {
   dotz::vec2 pos;
+  dotz::vec2 size;
+  dotz::vec4 colour;
 };
 
 struct upc {
@@ -61,6 +63,8 @@ struct ss {
     .attributes {
       vee::vertex_attribute_vec2(0, 0),
       vee::vertex_attribute_vec2(1, traits::offset_of(&inst::pos)),
+      vee::vertex_attribute_vec2(1, traits::offset_of(&inst::size)),
+      vee::vertex_attribute_vec4(1, traits::offset_of(&inst::colour)),
     },
   });
 };
@@ -78,9 +82,13 @@ static void on_frame() {
     voo::memiter<inst> m { *g.as()->buf.memory, &count };
     m += {
       .pos { 0, 0 },
+      .size { 1 },
+      .colour { 1 },
     };
     m += {
       .pos { 9, 9 },
+      .size { 1 },
+      .colour { 1, 0, 0, 1 },
     };
   }
 
