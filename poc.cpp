@@ -80,12 +80,17 @@ static void on_frame() {
     .extent { w, h },
   };
 
-  auto bh = ext.height / h;
+  voo::ots_present_guard pg { &g.ss()->sw, cb };
+  voo::cmd_render_pass rp { g.ss()->rpbs[g.ss()->sw.index()] };
+  vee::cmd_set_viewport(cb, ext);
+  vee::cmd_set_scissor(cb, ext);
+  vee::cmd_bind_gr_pipeline(cb, *g.as()->gp);
+  vee::cmd_bind_vertex_buffers(cb, 1, *g.as()->buf.buffer);
+  vee::cmd_push_vertex_constants(cb, *g.as()->pl, &pc);
 
-  unsigned count = 0;
-  unsigned n0 = 0;
-  unsigned n1 = 0;
   {
+    unsigned count = 0;
+    unsigned first = 0;
     voo::memiter<inst> m { *g.as()->buf.memory, &count };
     m += {
       .pos { 0, 0 },
@@ -108,7 +113,15 @@ static void on_frame() {
       .size { w, h - 2.f },
       .colour { 0.2f },
     };
-    n0 = count;
+
+    g.as()->quad.run(cb, 0, count - first, first);
+    first = count;
+    const auto bh = ext.height / h;
+    vee::cmd_set_scissor(cb, {
+      { 0, static_cast<int>(bh) },
+      { ext.width, ext.height - static_cast<int>(bh * 2) }
+    });
+
     for (auto y = 0.5f; y < h + 1; y += 0.9f) {
       m += {
         .pos { 0.5f, y },
@@ -116,7 +129,10 @@ static void on_frame() {
         .colour { 0.2f, 0.5f, 0.8f, 1.0f },
       };
     }
-    n1 = count;
+
+    g.as()->quad.run(cb, 0, count - first, first);
+    first = count;
+    vee::cmd_set_scissor(cb, ext);
 
     m += {
       .pos { 0.f, h - 1.f },
@@ -143,26 +159,10 @@ static void on_frame() {
       .size { w / 5.0f, 1.f },
       .colour { 0.5f, 0.f, 0.5f, 1.f },
     };
+
+    g.as()->quad.run(cb, 0, count - first, first);
+    first = count;
   }
-
-  voo::ots_present_guard pg { &g.ss()->sw, cb };
-  voo::cmd_render_pass rp { g.ss()->rpbs[g.ss()->sw.index()] };
-  vee::cmd_set_viewport(cb, ext);
-  vee::cmd_bind_gr_pipeline(cb, *g.as()->gp);
-  vee::cmd_bind_vertex_buffers(cb, 1, *g.as()->buf.buffer);
-  vee::cmd_push_vertex_constants(cb, *g.as()->pl, &pc);
-
-  vee::cmd_set_scissor(cb, ext);
-  g.as()->quad.run(cb, 0, n0, 0);
-
-  vee::cmd_set_scissor(cb, {
-    { 0, static_cast<int>(bh) },
-    { ext.width, ext.height - static_cast<int>(bh * 2) }
-  });
-  g.as()->quad.run(cb, 0, n1 - n0, n0);
-
-  vee::cmd_set_scissor(cb, ext);
-  g.as()->quad.run(cb, 0, count - n1, n1);
 }
 
 const int i = [] {
