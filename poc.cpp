@@ -145,9 +145,11 @@ static void on_frame() {
     });
     r.scissor({ 0, 1 }, { w, h - 2 });
 
-    for (auto y = 0.5f; y < h + 1; y += 0.9f) {
+    for (auto i = 0; i < 20; i++) {
+      auto scroll = 0.7f;
+      dotz::vec2 p { 0.5f, 0.5f + i * 0.9f - scroll };
       r.push({
-        .pos { 0.5f, y },
+        .pos = p + dotz::vec2 { 0, 1 },
         .size { w - 1.f, 0.7f },
         .colour { 0.2f, 0.5f, 0.8f, 1.0f },
       });
