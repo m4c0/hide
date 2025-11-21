@@ -26,25 +26,8 @@ struct as {
   voo::bound_buffer buf = voo::bound_buffer::create_from_host(
       dq.physical_device(), sizeof(inst) * max_inst,
       vee::buffer_usage::vertex_buffer);
-};
-struct ss {
-  voo::swapchain sw { g.as()->dq };
 
-  voo::single_cb cb {};
-  vee::render_pass rp = voo::single_att_render_pass(g.as()->dq);
-  hai::array<vee::framebuffer> fbs = sw.create_framebuffers(*rp);
-  hai::array<vee::render_pass_begin> rpbs = [this] {
-    hai::array<vee::render_pass_begin> res { fbs.size() };
-    for (auto i = 0; i < res.size(); i++) 
-      res[i] = vee::render_pass_begin {
-        .command_buffer = cb.cb(),
-        .render_pass = *rp,
-        .framebuffer = *fbs[i],
-        .extent = sw.extent(),
-        .clear_colours { vee::clear_colour(0.01, 0.02, 0.03, 1.0) },
-      };
-    return res;
-  }();
+  vee::render_pass rp = voo::single_att_render_pass(dq);
 
   vee::pipeline_layout pl = vee::create_pipeline_layout(
       vee::vertex_push_constant_range<upc>());
@@ -66,6 +49,24 @@ struct ss {
       vee::vertex_attribute_vec4(1, traits::offset_of(&inst::colour)),
     },
   });
+};
+struct ss {
+  voo::swapchain sw { g.as()->dq };
+
+  voo::single_cb cb {};
+  hai::array<vee::framebuffer> fbs = sw.create_framebuffers(*g.as()->rp);
+  hai::array<vee::render_pass_begin> rpbs = [this] {
+    hai::array<vee::render_pass_begin> res { fbs.size() };
+    for (auto i = 0; i < res.size(); i++) 
+      res[i] = vee::render_pass_begin {
+        .command_buffer = cb.cb(),
+        .render_pass = *g.as()->rp,
+        .framebuffer = *fbs[i],
+        .extent = sw.extent(),
+        .clear_colours { vee::clear_colour(0.01, 0.02, 0.03, 1.0) },
+      };
+    return res;
+  }();
 };
 
 static void on_frame() {
@@ -147,9 +148,9 @@ static void on_frame() {
   voo::ots_present_guard pg { &g.ss()->sw, cb };
   voo::cmd_render_pass rp { g.ss()->rpbs[g.ss()->sw.index()] };
   vee::cmd_set_viewport(cb, ext);
-  vee::cmd_bind_gr_pipeline(cb, *g.ss()->gp);
+  vee::cmd_bind_gr_pipeline(cb, *g.as()->gp);
   vee::cmd_bind_vertex_buffers(cb, 1, *g.as()->buf.buffer);
-  vee::cmd_push_vertex_constants(cb, *g.ss()->pl, &pc);
+  vee::cmd_push_vertex_constants(cb, *g.as()->pl, &pc);
 
   vee::cmd_set_scissor(cb, ext);
   g.as()->quad.run(cb, 0, n0, 0);
