@@ -108,10 +108,10 @@ static void on_frame() {
       .colour { 0.2f },
     };
     n0 = count;
-    for (auto y = 0.5f; y < h + 1; y += 1.5f) {
+    for (auto y = 0.5f; y < h + 1; y += 0.9f) {
       m += {
-        .pos { 1.f, y },
-        .size { w - 2.f, 1.0f },
+        .pos { 0.5f, y },
+        .size { w - 1.f, 0.7f },
         .colour { 0.2f, 0.5f, 0.8f, 1.0f },
       };
     }
