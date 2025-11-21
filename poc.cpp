@@ -156,32 +156,20 @@ static void on_frame() {
     r.run();
     r.scissor({ 0, 0 }, { w, h });
 
-    r.push({
-      .pos { 0.f, h - 1.f },
-      .size { w / 5.0f, 1.f },
-      .colour { 0.5f, 0.f, 0.f, 1.f },
-    });
-    r.push({
-      .pos { w / 5.0f, h - 1.f },
-      .size { w / 5.0f, 1.f },
-      .colour { 0.f, 0.5f, 0.f, 1.f },
-    });
-    r.push({
-      .pos { 2.0f * w / 5.0f, h - 1.f },
-      .size { w / 5.0f, 1.f },
-      .colour { 0.f, 0.f, 0.5f, 1.f },
-    });
-    r.push({
-      .pos { 3.0f * w / 5.0f, h - 1.f },
-      .size { w / 5.0f, 1.f },
-      .colour { 0.5f, 0.5f, 0.f, 1.f },
-    });
-    r.push({
-      .pos { 4.0f * w / 5.0f, h - 1.f },
-      .size { w / 5.0f, 1.f },
-      .colour { 0.5f, 0.f, 0.5f, 1.f },
-    });
-
+    for (auto i = 0; i < 5; i++) {
+      dotz::vec2 p { i * w / 5.f, h - 1.f };
+      dotz::vec2 s { w / 5.f, 1.f };
+      r.push({
+        .pos = p,
+        .size = s,
+        .colour { 0.5f },
+      });
+      r.push({
+        .pos = p + 0.1f,
+        .size = s - 0.2f,
+        .colour { 0.1f, 0.2, 0.3f, 1.0f },
+      });
+    }
     r.run();
   }
 }
