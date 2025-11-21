@@ -72,16 +72,31 @@ struct ss {
 
 class recorder : no::no {
   vee::command_buffer m_cb;
+  float m_h;
+
   unsigned m_count = 0;
   unsigned m_first = 0;
   voo::memiter<inst> m { *g.as()->buf.memory, &m_count };
 public:
-  explicit recorder(vee::command_buffer cb) : m_cb { cb } {}
+  explicit recorder(vee::command_buffer cb, float h) : m_cb { cb }, m_h { h } {}
 
   void push(inst i) { m += i; }
   void run() {
+    if (m_first == m_count) return;
     g.as()->quad.run(m_cb, 0, m_count - m_first, m_first);
     m_first = m_count;
+  }
+  void scissor(dotz::vec2 pos, dotz::vec2 size) {
+    run();
+
+    const auto bh = g.ss()->sw.extent().height / m_h;
+    pos = pos * bh;
+    size = size * bh;
+
+    vee::cmd_set_scissor(m_cb, {
+      { static_cast<int>(pos.x), static_cast<int>(pos.y) },
+      { static_cast<unsigned>(size.x), static_cast<unsigned>(size.y) },
+    });
   }
 };
 
@@ -99,13 +114,13 @@ static void on_frame() {
   voo::ots_present_guard pg { &g.ss()->sw, cb };
   voo::cmd_render_pass rp { g.ss()->rpbs[g.ss()->sw.index()] };
   vee::cmd_set_viewport(cb, ext);
-  vee::cmd_set_scissor(cb, ext);
   vee::cmd_bind_gr_pipeline(cb, *g.as()->gp);
   vee::cmd_bind_vertex_buffers(cb, 1, *g.as()->buf.buffer);
   vee::cmd_push_vertex_constants(cb, *g.as()->pl, &pc);
 
   {
-    recorder r { cb };
+    recorder r { cb, h };
+    r.scissor({ 0, 0 }, { w, h });
 
     r.push({
       .pos { 0, 0 },
@@ -128,13 +143,7 @@ static void on_frame() {
       .size { w, h - 2.f },
       .colour { 0.2f },
     });
-
-    r.run();
-    const auto bh = ext.height / h;
-    vee::cmd_set_scissor(cb, {
-      { 0, static_cast<int>(bh) },
-      { ext.width, ext.height - static_cast<int>(bh * 2) }
-    });
+    r.scissor({ 0, 1 }, { w, h - 2 });
 
     for (auto y = 0.5f; y < h + 1; y += 0.9f) {
       r.push({
@@ -145,7 +154,7 @@ static void on_frame() {
     }
 
     r.run();
-    vee::cmd_set_scissor(cb, ext);
+    r.scissor({ 0, 0 }, { w, h });
 
     r.push({
       .pos { 0.f, h - 1.f },
