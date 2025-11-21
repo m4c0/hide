@@ -5,6 +5,7 @@
 import casein;
 import dotz;
 import hai;
+import no;
 import vinyl;
 import voo;
 
@@ -69,6 +70,21 @@ struct ss {
   }();
 };
 
+class recorder : no::no {
+  vee::command_buffer m_cb;
+  unsigned m_count = 0;
+  unsigned m_first = 0;
+  voo::memiter<inst> m { *g.as()->buf.memory, &m_count };
+public:
+  explicit recorder(vee::command_buffer cb) : m_cb { cb } {}
+
+  void push(inst i) { m += i; }
+  void run() {
+    g.as()->quad.run(m_cb, 0, m_count - m_first, m_first);
+    m_first = m_count;
+  }
+};
+
 static void on_frame() {
   auto cb = g.ss()->cb.cb();
   auto aspect = g.ss()->sw.aspect();
@@ -89,33 +105,31 @@ static void on_frame() {
   vee::cmd_push_vertex_constants(cb, *g.as()->pl, &pc);
 
   {
-    unsigned count = 0;
-    unsigned first = 0;
-    voo::memiter<inst> m { *g.as()->buf.memory, &count };
-    m += {
+    recorder r { cb };
+
+    r.push({
       .pos { 0, 0 },
       .size { 1 },
       .colour { 1, 0, 0, 1 },
-    };
-    m += {
+    });
+    r.push({
       .pos { 1, 0 },
       .size { w - 2.f, 1.f },
       .colour { 0.5f },
-    };
-    m += {
+    });
+    r.push({
       .pos { w - 1.f, 0.f },
       .size { 1 },
       .colour { 0, 1, 0, 1 },
-    };
+    });
 
-    m += {
+    r.push({
       .pos { 0, 1 },
       .size { w, h - 2.f },
       .colour { 0.2f },
-    };
+    });
 
-    g.as()->quad.run(cb, 0, count - first, first);
-    first = count;
+    r.run();
     const auto bh = ext.height / h;
     vee::cmd_set_scissor(cb, {
       { 0, static_cast<int>(bh) },
@@ -123,45 +137,43 @@ static void on_frame() {
     });
 
     for (auto y = 0.5f; y < h + 1; y += 0.9f) {
-      m += {
+      r.push({
         .pos { 0.5f, y },
         .size { w - 1.f, 0.7f },
         .colour { 0.2f, 0.5f, 0.8f, 1.0f },
-      };
+      });
     }
 
-    g.as()->quad.run(cb, 0, count - first, first);
-    first = count;
+    r.run();
     vee::cmd_set_scissor(cb, ext);
 
-    m += {
+    r.push({
       .pos { 0.f, h - 1.f },
       .size { w / 5.0f, 1.f },
       .colour { 0.5f, 0.f, 0.f, 1.f },
-    };
-    m += {
+    });
+    r.push({
       .pos { w / 5.0f, h - 1.f },
       .size { w / 5.0f, 1.f },
       .colour { 0.f, 0.5f, 0.f, 1.f },
-    };
-    m += {
+    });
+    r.push({
       .pos { 2.0f * w / 5.0f, h - 1.f },
       .size { w / 5.0f, 1.f },
       .colour { 0.f, 0.f, 0.5f, 1.f },
-    };
-    m += {
+    });
+    r.push({
       .pos { 3.0f * w / 5.0f, h - 1.f },
       .size { w / 5.0f, 1.f },
       .colour { 0.5f, 0.5f, 0.f, 1.f },
-    };
-    m += {
+    });
+    r.push({
       .pos { 4.0f * w / 5.0f, h - 1.f },
       .size { w / 5.0f, 1.f },
       .colour { 0.5f, 0.f, 0.5f, 1.f },
-    };
+    });
 
-    g.as()->quad.run(cb, 0, count - first, first);
-    first = count;
+    r.run();
   }
 }
 
