@@ -77,6 +77,8 @@ struct ss {
     .render_pass = *g.as()->rp,
     .clear_colours { vee::clear_colour(0.01, 0.02, 0.03, 1.0) },
   });
+
+  bool recorded = false;
 };
 
 class recorder : no::no {
@@ -108,15 +110,6 @@ public:
     });
   }
 };
-
-static void on_frame() {
-  auto pcb = g.ss()->pcb;
-  auto scb = g.ss()->scb;
-
-  voo::ots_present_guard pg { &g.ss()->sw, pcb };
-  voo::cmd_render_pass rp { g.ss()->rpbs[g.ss()->sw.index()].rpb, false };
-  vee::cmd_execute_command(pcb, scb);
-}
 
 static void do_ui() {
   auto cb = g.ss()->scb;
@@ -191,12 +184,24 @@ static void do_ui() {
     }
     r.run();
   }
+}
 
-  g.on_frame() = on_frame;
+static void on_frame() {
+  if (!g.ss()->recorded) {
+    do_ui();
+    g.ss()->recorded = true;
+  }
+
+  auto pcb = g.ss()->pcb;
+  auto scb = g.ss()->scb;
+
+  voo::ots_present_guard pg { &g.ss()->sw, pcb };
+  voo::cmd_render_pass rp { g.ss()->rpbs[g.ss()->sw.index()].rpb, false };
+  vee::cmd_execute_command(pcb, scb);
 }
 
 const int i = [] {
-  g.on_frame() = do_ui;
+  g.on_frame() = on_frame;
   g.setup();
   return 0;
 }();
