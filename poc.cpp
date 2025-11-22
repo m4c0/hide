@@ -16,6 +16,42 @@ struct inst {
   dotz::vec4 colour;
 };
 
+class recorder : no::no {
+  vee::command_buffer m_cb;
+  float m_bh;
+
+  unsigned m_count = 0;
+  unsigned m_first = 0;
+  voo::memiter<inst> m;
+public:
+  explicit recorder(vee::command_buffer cb, float bh, vee::device_memory::type mem) :
+    m_cb { cb }
+  , m_bh { bh }
+  , m { mem, &m_count }
+  {}
+  ~recorder() {
+    vee::end_cmd_buf(m_cb);
+  }
+
+  void push(inst i) { m += i; }
+  void run() {
+    if (m_first == m_count) return;
+    vee::cmd_draw(m_cb, 6, m_count - m_first, m_first);
+    m_first = m_count;
+  }
+  void scissor(dotz::vec2 pos, dotz::vec2 size) {
+    run();
+
+    pos = pos * m_bh;
+    size = size * m_bh;
+
+    vee::cmd_set_scissor(m_cb, {
+      { static_cast<int>(pos.x), static_cast<int>(pos.y) },
+      { static_cast<unsigned>(size.x), static_cast<unsigned>(size.y) },
+    });
+  }
+};
+
 class pipeline {
   voo::command_pool m_cpool {};
   vee::command_buffer m_cb = m_cpool.allocate_secondary_command_buffer();
@@ -24,6 +60,9 @@ class pipeline {
 
   vee::render_pass m_rp;
   vee::gr_pipeline m_gp;
+
+  voo::bound_buffer m_buf;
+  voo::one_quad m_quad;
 
 public:
   pipeline(vee::physical_device pd, vee::surface::type surf) :
@@ -62,25 +101,33 @@ public:
       },
     })
   }
+  , m_buf {
+    voo::bound_buffer::create_from_host(pd, sizeof(inst) * max_inst, vee::buffer_usage::vertex_buffer)
+  }
+  , m_quad { pd }
   {}
 
   [[nodiscard]] constexpr auto command_buffer() const { return m_cb; }
 
-  [[nodiscard]] auto render(dotz::vec2 ext) {
-    voo::cmd_buf_render_pass_continue rpc { m_cb, *m_rp };
+  [[nodiscard]] auto record(vee::extent ext, float h) {
+    float aspect = static_cast<float>(ext.width) / static_cast<float>(ext.height);
+
+    dotz::vec2 e { h * aspect, h };
+
+    vee::begin_cmd_buf_render_pass_continue(m_cb, *m_rp);
+    vee::cmd_set_viewport(m_cb, ext);
     vee::cmd_bind_gr_pipeline(m_cb, *m_gp);
-    vee::cmd_push_vertex_constants(m_cb, *m_pl, &ext);
-    return rpc;
+    vee::cmd_push_vertex_constants(m_cb, *m_pl, &e);
+    vee::cmd_bind_vertex_buffers(m_cb, 0, m_quad.buffer());
+    vee::cmd_bind_vertex_buffers(m_cb, 1, *m_buf.buffer);
+
+    return recorder { m_cb, ext.height / h, *m_buf.memory };
   }
 };
 
 vinyl::v<struct as, struct ss> g;
 struct as {
   voo::device_and_queue dq { "poc", casein::native_ptr };
-  voo::one_quad quad { dq };
-  voo::bound_buffer buf = voo::bound_buffer::create_from_host(
-      dq.physical_device(), sizeof(inst) * max_inst,
-      vee::buffer_usage::vertex_buffer);
 
   vee::render_pass rp = voo::single_att_render_pass(dq);
 };
@@ -104,49 +151,12 @@ struct ss {
   bool recorded = false;
 };
 
-class recorder : no::no {
-  vee::command_buffer m_cb;
-  float m_h;
-
-  unsigned m_count = 0;
-  unsigned m_first = 0;
-  voo::memiter<inst> m { *g.as()->buf.memory, &m_count };
-public:
-  explicit recorder(vee::command_buffer cb, float h) : m_cb { cb }, m_h { h } {}
-
-  void push(inst i) { m += i; }
-  void run() {
-    if (m_first == m_count) return;
-    g.as()->quad.run(m_cb, 0, m_count - m_first, m_first);
-    m_first = m_count;
-  }
-  void scissor(dotz::vec2 pos, dotz::vec2 size) {
-    run();
-
-    const auto bh = g.ss()->sw.extent().height / m_h;
-    pos = pos * bh;
-    size = size * bh;
-
-    vee::cmd_set_scissor(m_cb, {
-      { static_cast<int>(pos.x), static_cast<int>(pos.y) },
-      { static_cast<unsigned>(size.x), static_cast<unsigned>(size.y) },
-    });
-  }
-};
-
 static void do_ui() {
-  auto aspect = g.ss()->sw.aspect();
-  auto ext = g.ss()->sw.extent();
-
   auto h = 10.f;
-  auto w = aspect * h;
+  auto w = g.ss()->sw.aspect() * h;
 
-  auto cb = g.ss()->ppl.render({ w, h });
-  vee::cmd_set_viewport(cb, ext);
-  vee::cmd_bind_vertex_buffers(cb, 1, *g.as()->buf.buffer);
-
+  auto r = g.ss()->ppl.record(g.ss()->sw.extent(), h);
   {
-    recorder r { cb, h };
     r.scissor({ 0, 0 }, { w, h });
 
     r.push({
