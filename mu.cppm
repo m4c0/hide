@@ -84,7 +84,7 @@ namespace mu::vulkan {
         .aspect = static_cast<float>(rpb.extent.width) / static_cast<float>(rpb.extent.height)
       };
 
-      voo::cmd_render_pass rp { rpb };
+      voo::cmd_render_pass rp { rpb, true };
       vee::cmd_set_scissor(cb, rpb.extent);
       vee::cmd_set_viewport(cb, rpb.extent);
       vee::cmd_bind_gr_pipeline(cb, *m_gp);

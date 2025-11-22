@@ -30,6 +30,20 @@ struct as {
 
   vee::render_pass rp = voo::single_att_render_pass(dq);
 
+  vee::render_pass srp = vee::create_render_pass({
+    .attachments {{
+      vee::create_passthru_colour_attachment(dq.physical_device(), dq.surface()),
+    }},
+    .subpasses {{
+      vee::create_subpass({
+        .colours {{ vee::create_attachment_ref(0, vee::image_layout_color_attachment_optimal) }},
+      }),
+    }},
+    .dependencies {{
+      vee::create_colour_dependency(),
+    }},
+  });
+
   vee::pipeline_layout pl = vee::create_pipeline_layout(
       vee::vertex_push_constant_range<upc>());
   vee::gr_pipeline gp = vee::create_graphics_pipeline({
@@ -54,20 +68,15 @@ struct as {
 struct ss {
   voo::swapchain sw { g.as()->dq };
 
-  voo::single_cb cb {};
-  hai::array<vee::framebuffer> fbs = sw.create_framebuffers(*g.as()->rp);
-  hai::array<vee::render_pass_begin> rpbs = [this] {
-    hai::array<vee::render_pass_begin> res { fbs.size() };
-    for (auto i = 0; i < res.size(); i++) 
-      res[i] = vee::render_pass_begin {
-        .command_buffer = cb.cb(),
-        .render_pass = *g.as()->rp,
-        .framebuffer = *fbs[i],
-        .extent = sw.extent(),
-        .clear_colours { vee::clear_colour(0.01, 0.02, 0.03, 1.0) },
-      };
-    return res;
-  }();
+  voo::command_pool cpool {};
+  vee::command_buffer pcb = cpool.allocate_primary_command_buffer();
+  vee::command_buffer scb = cpool.allocate_secondary_command_buffer();
+
+  hai::array<voo::swapchain::render_pass_pair> rpbs = sw.create_pairs(vee::render_pass_begin {
+    .command_buffer = pcb,
+    .render_pass = *g.as()->rp,
+    .clear_colours { vee::clear_colour(0.01, 0.02, 0.03, 1.0) },
+  });
 };
 
 class recorder : no::no {
@@ -101,7 +110,16 @@ public:
 };
 
 static void on_frame() {
-  auto cb = g.ss()->cb.cb();
+  auto pcb = g.ss()->pcb;
+  auto scb = g.ss()->scb;
+
+  voo::ots_present_guard pg { &g.ss()->sw, pcb };
+  voo::cmd_render_pass rp { g.ss()->rpbs[g.ss()->sw.index()].rpb, false };
+  vee::cmd_execute_command(pcb, scb);
+}
+
+static void do_ui() {
+  auto cb = g.ss()->scb;
   auto aspect = g.ss()->sw.aspect();
   auto ext = g.ss()->sw.extent();
 
@@ -111,8 +129,7 @@ static void on_frame() {
     .extent { w, h },
   };
 
-  voo::ots_present_guard pg { &g.ss()->sw, cb };
-  voo::cmd_render_pass rp { g.ss()->rpbs[g.ss()->sw.index()] };
+  voo::cmd_buf_render_pass_continue rpc { cb, *g.as()->srp };
   vee::cmd_set_viewport(cb, ext);
   vee::cmd_bind_gr_pipeline(cb, *g.as()->gp);
   vee::cmd_bind_vertex_buffers(cb, 1, *g.as()->buf.buffer);
@@ -174,10 +191,12 @@ static void on_frame() {
     }
     r.run();
   }
+
+  g.on_frame() = on_frame;
 }
 
 const int i = [] {
-  g.on_frame() = on_frame;
+  g.on_frame() = do_ui;
   g.setup();
   return 0;
 }();
